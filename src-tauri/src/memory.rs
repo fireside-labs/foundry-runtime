@@ -15,6 +15,7 @@ pub struct SemanticMemory {
     pub key: String,
     pub value: String,
     pub category: String,
+    pub namespace: String,  // Hierarchical: "general.fact", "bakery.recipes", etc. See embed::namespace_validate.
     pub confidence: f64,
     pub supersedes: Option<String>,
     pub change_reason: Option<String>,
@@ -33,6 +34,7 @@ pub struct EpisodicMemory {
     pub entities: String,
     pub emotional_tone: String,
     pub turn_count: i64,
+    pub namespace: String,  // e.g., "general", "roundtable.strategy", "client.acme-corp"
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -43,6 +45,7 @@ pub struct ProceduralMemory {
     pub steps: String, // JSON array
     pub times_referenced: i64,
     pub created_at: String,
+    pub namespace: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -188,7 +191,64 @@ pub fn init_schema(conn: &Connection) -> Result<(), String> {
         );
     ");
 
+    // ---- Migration: hierarchical namespacing (v0.1.0+) ----
+    // Add `namespace` column to memory tables if not present. Backfill semantic
+    // namespaces from existing `category` values so existing rows get a
+    // sensible default ("general.fact", "general.preference", etc).
+    add_column_if_missing(conn, "semantic_memories", "namespace",
+        "TEXT NOT NULL DEFAULT 'general'")?;
+    add_column_if_missing(conn, "episodic_memories", "namespace",
+        "TEXT NOT NULL DEFAULT 'general'")?;
+    add_column_if_missing(conn, "procedural_memories", "namespace",
+        "TEXT NOT NULL DEFAULT 'general'")?;
+
+    // One-time backfill: derive semantic namespaces from category if still default.
+    // Idempotent — only updates rows still at the default 'general'.
+    let _ = conn.execute(
+        "UPDATE semantic_memories \
+         SET namespace = 'general.' || COALESCE(category, 'fact') \
+         WHERE namespace = 'general'",
+        [],
+    );
+
+    // Indices for namespace prefix queries (tree view, scoped search).
+    let _ = conn.execute_batch("
+        CREATE INDEX IF NOT EXISTS idx_semantic_namespace ON semantic_memories(namespace);
+        CREATE INDEX IF NOT EXISTS idx_episodic_namespace ON episodic_memories(namespace);
+        CREATE INDEX IF NOT EXISTS idx_procedural_namespace ON procedural_memories(namespace);
+    ");
+
     Ok(())
+}
+
+/// Add a column to a table if it doesn't already exist. Idempotent —
+/// safe to call on every init_schema run.
+fn add_column_if_missing(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    column_def: &str,
+) -> Result<(), String> {
+    let existing: Vec<String> = {
+        let mut stmt = conn
+            .prepare(&format!("PRAGMA table_info({})", table))
+            .map_err(|e| format!("PRAGMA prep failed for {}: {}", table, e))?;
+        let rows = stmt
+            .query_map([], |row| row.get::<_, String>(1))
+            .map_err(|e| format!("PRAGMA query failed for {}: {}", table, e))?;
+        rows.flatten().collect()
+    };
+
+    if existing.iter().any(|c| c == column) {
+        return Ok(());
+    }
+
+    conn.execute(
+        &format!("ALTER TABLE {} ADD COLUMN {} {}", table, column, column_def),
+        [],
+    )
+    .map(|_| ())
+    .map_err(|e| format!("ALTER TABLE {} ADD {} failed: {}", table, column, e))
 }
 
 // ---------------------------------------------------------------------------
@@ -246,6 +306,20 @@ pub fn core_set(conn: &Connection, content: &str) -> Result<(), String> {
 // ---------------------------------------------------------------------------
 
 pub fn semantic_save(conn: &Connection, key: &str, value: &str, category: &str) -> Result<String, String> {
+    // Backwards-compat wrapper: derive namespace from category for legacy callers.
+    let ns = format!("general.{}", category);
+    semantic_save_with_namespace(conn, key, value, category, &ns)
+}
+
+/// Namespace-aware save. Use this for new code; semantic_save() is the legacy
+/// wrapper. Caller should validate namespace via embed::namespace_validate first.
+pub fn semantic_save_with_namespace(
+    conn: &Connection,
+    key: &str,
+    value: &str,
+    category: &str,
+    namespace: &str,
+) -> Result<String, String> {
     let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
     // Check for existing
@@ -261,9 +335,10 @@ pub fn semantic_save(conn: &Connection, key: &str, value: &str, category: &str) 
         action = "UPDATE";
         conn.execute(
             "UPDATE semantic_memories SET value = ?1, confidence = 1.0, supersedes = ?2, \
-             change_reason = 'updated by model', updated_at = ?3, access_count = access_count + 1 \
-             WHERE id = ?4",
-            params![value, old_value, now, id],
+             change_reason = 'updated by model', updated_at = ?3, access_count = access_count + 1, \
+             namespace = ?4 \
+             WHERE id = ?5",
+            params![value, old_value, now, namespace, id],
         ).map_err(|e| format!("Semantic update failed: {}", e))?;
 
         // Update FTS
@@ -281,9 +356,9 @@ pub fn semantic_save(conn: &Connection, key: &str, value: &str, category: &str) 
         // ADD — new memory
         action = "ADD";
         conn.execute(
-            "INSERT INTO semantic_memories (key, value, category, confidence, created_at, updated_at) \
-             VALUES (?1, ?2, ?3, 0.8, ?4, ?4)",
-            params![key, value, category, now],
+            "INSERT INTO semantic_memories (key, value, category, namespace, confidence, created_at, updated_at) \
+             VALUES (?1, ?2, ?3, ?4, 0.8, ?5, ?5)",
+            params![key, value, category, namespace, now],
         ).map_err(|e| format!("Semantic insert failed: {}", e))?;
 
         let id = conn.last_insert_rowid();
@@ -299,7 +374,18 @@ pub fn semantic_save(conn: &Connection, key: &str, value: &str, category: &str) 
 }
 
 pub fn semantic_search(conn: &Connection, query: &str, limit: u32) -> Result<Vec<SemanticMemory>, String> {
-    // Try FTS first, fall back to LIKE
+    semantic_search_ns(conn, query, None, limit)
+}
+
+/// Search semantic memories filtered by namespace prefix.
+/// `namespace_prefix = Some("bakery")` matches `bakery`, `bakery.recipes`, `bakery.recipes.sourdough`, etc.
+/// `namespace_prefix = None` searches all namespaces (back-compat with semantic_search).
+pub fn semantic_search_ns(
+    conn: &Connection,
+    query: &str,
+    namespace_prefix: Option<&str>,
+    limit: u32,
+) -> Result<Vec<SemanticMemory>, String> {
     let fts_query = query.split_whitespace()
         .map(|w| format!("\"{}\"", w.replace('"', "")))
         .collect::<Vec<_>>()
@@ -307,27 +393,47 @@ pub fn semantic_search(conn: &Connection, query: &str, limit: u32) -> Result<Vec
 
     let mut results = Vec::new();
 
-    // FTS search
-    if let Ok(mut stmt) = conn.prepare(
-        "SELECT sm.id, sm.key, sm.value, sm.category, sm.confidence, sm.supersedes, \
-         sm.change_reason, sm.created_at, sm.updated_at, sm.access_count \
+    // Build the namespace WHERE clause once. SQLite's `||` does string concat;
+    // we match exact namespace OR any namespace starting with `prefix.`.
+    let ns_clause = if namespace_prefix.is_some() {
+        " AND (sm.namespace = ?3 OR sm.namespace LIKE ?3 || '.%')"
+    } else {
+        ""
+    };
+
+    // FTS search with optional namespace filter
+    let fts_sql = format!(
+        "SELECT sm.id, sm.key, sm.value, sm.category, sm.namespace, sm.confidence, \
+         sm.supersedes, sm.change_reason, sm.created_at, sm.updated_at, sm.access_count \
          FROM semantic_fts fts JOIN semantic_memories sm ON fts.rowid = sm.id \
-         WHERE semantic_fts MATCH ?1 ORDER BY rank LIMIT ?2"
-    ) {
-        if let Ok(rows) = stmt.query_map(params![fts_query, limit], |row| {
+         WHERE semantic_fts MATCH ?1{} ORDER BY rank LIMIT ?2",
+        ns_clause
+    );
+
+    if let Ok(mut stmt) = conn.prepare(&fts_sql) {
+        let row_mapper = |row: &rusqlite::Row| -> rusqlite::Result<SemanticMemory> {
             Ok(SemanticMemory {
                 id: row.get(0)?,
                 key: row.get(1)?,
                 value: row.get(2)?,
                 category: row.get(3)?,
-                confidence: row.get(4)?,
-                supersedes: row.get(5)?,
-                change_reason: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-                access_count: row.get(9)?,
+                namespace: row.get(4)?,
+                confidence: row.get(5)?,
+                supersedes: row.get(6)?,
+                change_reason: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+                access_count: row.get(10)?,
             })
-        }) {
+        };
+
+        let rows_result = if let Some(ns) = namespace_prefix {
+            stmt.query_map(params![fts_query, limit, ns], row_mapper)
+        } else {
+            stmt.query_map(params![fts_query, limit], row_mapper)
+        };
+
+        if let Ok(rows) = rows_result {
             for row in rows.flatten() {
                 results.push(row);
             }
@@ -337,28 +443,41 @@ pub fn semantic_search(conn: &Connection, query: &str, limit: u32) -> Result<Vec
     // Fallback to LIKE if FTS returned nothing
     if results.is_empty() {
         let pattern = format!("%{}%", query);
-        let mut stmt = conn.prepare(
-            "SELECT id, key, value, category, confidence, supersedes, change_reason, \
+        let like_sql = format!(
+            "SELECT id, key, value, category, namespace, confidence, supersedes, change_reason, \
              created_at, updated_at, access_count FROM semantic_memories \
-             WHERE key LIKE ?1 OR value LIKE ?1 ORDER BY updated_at DESC LIMIT ?2"
-        ).map_err(|e| e.to_string())?;
+             WHERE (key LIKE ?1 OR value LIKE ?1){} ORDER BY updated_at DESC LIMIT ?2",
+            if namespace_prefix.is_some() {
+                " AND (namespace = ?3 OR namespace LIKE ?3 || '.%')"
+            } else {
+                ""
+            }
+        );
 
-        let rows = stmt.query_map(params![pattern, limit], |row| {
+        let mut stmt = conn.prepare(&like_sql).map_err(|e| e.to_string())?;
+        let row_mapper = |row: &rusqlite::Row| -> rusqlite::Result<SemanticMemory> {
             Ok(SemanticMemory {
                 id: row.get(0)?,
                 key: row.get(1)?,
                 value: row.get(2)?,
                 category: row.get(3)?,
-                confidence: row.get(4)?,
-                supersedes: row.get(5)?,
-                change_reason: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-                access_count: row.get(9)?,
+                namespace: row.get(4)?,
+                confidence: row.get(5)?,
+                supersedes: row.get(6)?,
+                change_reason: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+                access_count: row.get(10)?,
             })
-        }).map_err(|e| e.to_string())?;
+        };
 
-        for row in rows.flatten() {
+        let rows_result = if let Some(ns) = namespace_prefix {
+            stmt.query_map(params![pattern, limit, ns], row_mapper)
+        } else {
+            stmt.query_map(params![pattern, limit], row_mapper)
+        };
+
+        for row in rows_result.map_err(|e| e.to_string())?.flatten() {
             results.push(row);
         }
     }
@@ -376,7 +495,7 @@ pub fn semantic_search(conn: &Connection, query: &str, limit: u32) -> Result<Vec
 
 pub fn semantic_get_all(conn: &Connection) -> Result<Vec<SemanticMemory>, String> {
     let mut stmt = conn.prepare(
-        "SELECT id, key, value, category, confidence, supersedes, change_reason, \
+        "SELECT id, key, value, category, namespace, confidence, supersedes, change_reason, \
          created_at, updated_at, access_count FROM semantic_memories ORDER BY updated_at DESC"
     ).map_err(|e| e.to_string())?;
 
@@ -386,16 +505,50 @@ pub fn semantic_get_all(conn: &Connection) -> Result<Vec<SemanticMemory>, String
             key: row.get(1)?,
             value: row.get(2)?,
             category: row.get(3)?,
-            confidence: row.get(4)?,
-            supersedes: row.get(5)?,
-            change_reason: row.get(6)?,
-            created_at: row.get(7)?,
-            updated_at: row.get(8)?,
-            access_count: row.get(9)?,
+            namespace: row.get(4)?,
+            confidence: row.get(5)?,
+            supersedes: row.get(6)?,
+            change_reason: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
+            access_count: row.get(10)?,
         })
     }).map_err(|e| e.to_string())?;
 
     Ok(rows.flatten().collect())
+}
+
+/// List distinct namespaces under an optional prefix.
+/// `prefix = None` returns all namespaces. `prefix = Some("bakery")` returns
+/// `bakery`, `bakery.recipes`, etc. Used by the memory dashboard tree view.
+pub fn semantic_list_namespaces(conn: &Connection, prefix: Option<&str>) -> Result<Vec<String>, String> {
+    let (sql, has_param) = match prefix {
+        Some(_) => (
+            "SELECT DISTINCT namespace FROM semantic_memories \
+             WHERE namespace = ?1 OR namespace LIKE ?1 || '.%' \
+             ORDER BY namespace",
+            true,
+        ),
+        None => (
+            "SELECT DISTINCT namespace FROM semantic_memories ORDER BY namespace",
+            false,
+        ),
+    };
+
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let rows: Vec<String> = if has_param {
+        stmt.query_map(params![prefix.unwrap()], |row| row.get::<_, String>(0))
+            .map_err(|e| e.to_string())?
+            .flatten()
+            .collect()
+    } else {
+        stmt.query_map([], |row| row.get::<_, String>(0))
+            .map_err(|e| e.to_string())?
+            .flatten()
+            .collect()
+    };
+
+    Ok(rows)
 }
 
 pub fn semantic_delete(conn: &Connection, key: &str) -> Result<(), String> {
@@ -443,7 +596,7 @@ pub fn episodic_save(conn: &Connection, conv_id: &str, summary: &str,
 pub fn episodic_search(conn: &Connection, query: &str, limit: u32) -> Result<Vec<EpisodicMemory>, String> {
     let pattern = format!("%{}%", query);
     let mut stmt = conn.prepare(
-        "SELECT id, conversation_id, date, summary, topics, entities, emotional_tone, turn_count \
+        "SELECT id, conversation_id, date, summary, topics, entities, emotional_tone, turn_count, namespace \
          FROM episodic_memories WHERE summary LIKE ?1 OR topics LIKE ?1 \
          ORDER BY date DESC LIMIT ?2"
     ).map_err(|e| e.to_string())?;
@@ -458,6 +611,7 @@ pub fn episodic_search(conn: &Connection, query: &str, limit: u32) -> Result<Vec
             entities: row.get(5)?,
             emotional_tone: row.get(6)?,
             turn_count: row.get(7)?,
+            namespace: row.get(8)?,
         })
     }).map_err(|e| e.to_string())?;
 
@@ -466,7 +620,7 @@ pub fn episodic_search(conn: &Connection, query: &str, limit: u32) -> Result<Vec
 
 pub fn episodic_get_recent(conn: &Connection, limit: u32) -> Result<Vec<EpisodicMemory>, String> {
     let mut stmt = conn.prepare(
-        "SELECT id, conversation_id, date, summary, topics, entities, emotional_tone, turn_count \
+        "SELECT id, conversation_id, date, summary, topics, entities, emotional_tone, turn_count, namespace \
          FROM episodic_memories ORDER BY date DESC LIMIT ?1"
     ).map_err(|e| e.to_string())?;
 
@@ -480,6 +634,7 @@ pub fn episodic_get_recent(conn: &Connection, limit: u32) -> Result<Vec<Episodic
             entities: row.get(5)?,
             emotional_tone: row.get(6)?,
             turn_count: row.get(7)?,
+            namespace: row.get(8)?,
         })
     }).map_err(|e| e.to_string())?;
 
@@ -506,7 +661,7 @@ pub fn procedural_save(conn: &Connection, name: &str, description: &str, steps: 
 
 pub fn procedural_get_all(conn: &Connection) -> Result<Vec<ProceduralMemory>, String> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, description, steps, times_referenced, created_at \
+        "SELECT id, name, description, steps, times_referenced, created_at, namespace \
          FROM procedural_memories ORDER BY times_referenced DESC"
     ).map_err(|e| e.to_string())?;
 
@@ -518,6 +673,7 @@ pub fn procedural_get_all(conn: &Connection) -> Result<Vec<ProceduralMemory>, St
             steps: row.get(3)?,
             times_referenced: row.get(4)?,
             created_at: row.get(5)?,
+            namespace: row.get(6)?,
         })
     }).map_err(|e| e.to_string())?;
 
