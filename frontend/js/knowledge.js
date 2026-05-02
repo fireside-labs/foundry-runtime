@@ -138,6 +138,9 @@ const Knowledge = {
                             </div>
                         </div>
                         <div style="display:flex;gap:6px;flex-shrink:0">
+                            <button class="btn btn-secondary btn-sm kb-embed-btn" data-kb-id="${kb.id}" title="Generate vector embeddings" style="font-size:11px">
+                                ⬡ Embed
+                            </button>
                             <button class="btn btn-secondary btn-sm kb-reindex-btn" data-kb-id="${kb.id}" title="Re-index" style="font-size:11px">
                                 ↻ Re-index
                             </button>
@@ -185,6 +188,40 @@ const Knowledge = {
                     this.render();
                 } catch (e) {
                     console.error('[knowledge] Delete failed:', e);
+                }
+            });
+        });
+
+        document.querySelectorAll('.kb-embed-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const kbId = btn.dataset.kbId;
+                btn.disabled = true;
+                btn.textContent = '◌ Embedding...';
+                btn.style.color = 'var(--text-tertiary)';
+                try {
+                    const result = await window.__TAURI__.core.invoke('kb_embed', { kbId });
+                    if (result.chunks_embedded === 0 && result.chunks_total === 0) {
+                        btn.textContent = '✓ All embedded';
+                    } else {
+                        btn.textContent = `✓ ${result.chunks_embedded} vectors`;
+                    }
+                    btn.style.color = 'var(--status-success)';
+                    if (result.chunks_skipped > 0) {
+                        btn.textContent += ` (${result.chunks_skipped} skipped)`;
+                        btn.style.color = 'var(--status-warning)';
+                    }
+                    setTimeout(() => this.render(), 2000);
+                } catch (e) {
+                    btn.textContent = '✗ Sidecar offline';
+                    btn.style.color = 'var(--status-error)';
+                    btn.title = e.toString();
+                    console.error('[knowledge] Embedding failed:', e);
+                    // Re-enable so user can retry
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = '⬡ Embed';
+                        btn.style.color = '';
+                    }, 3000);
                 }
             });
         });

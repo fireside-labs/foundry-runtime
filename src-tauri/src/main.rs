@@ -1319,6 +1319,7 @@ fn main() {
             // Knowledge Base (RAG)
             rag::kb_create,
             rag::kb_index,
+            rag::kb_embed,
             rag::kb_search,
             rag::kb_list,
             rag::kb_delete,

@@ -11,6 +11,7 @@
 //   4. Auto-injection into chat context based on user's question
 
 use crate::sandbox;
+use crate::embed;
 use serde::{Serialize, Deserialize};
 use rusqlite::{Connection, params};
 use std::fs;
@@ -52,7 +53,15 @@ pub struct IndexProgress {
     pub files_total: usize,
     pub chunks_created: usize,
     pub current_file: String,
-    pub status: String,
+    pub status: String, // "indexing", "complete", "error"
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct EmbedProgress {
+    pub chunks_embedded: usize,
+    pub chunks_total: usize,
+    pub chunks_skipped: usize,
+    pub status: String, // "complete", "partial", "error"
 }
 
 // ---------------------------------------------------------------------------
@@ -467,21 +476,194 @@ pub fn kb_index(kb_id: String) -> Result<IndexProgress, String> {
     })
 }
 
-/// Search a knowledge base by text query. Returns top-K relevant chunks.
-/// Uses FTS5 full-text search with BM25 ranking when available,
-/// falls back to LIKE matching otherwise.
+/// Generate embeddings for all un-embedded chunks in a knowledge base.
+/// Calls embed_text (sidecar on port 8081) for each chunk and stores
+/// the resulting vector as a BLOB in the embedding column.
+///
+/// This is designed to be called after kb_index. If the sidecar isn't
+/// running, it will fail gracefully and report partial progress.
 #[tauri::command]
-pub fn kb_search(query: String, namespace: Option<String>, limit: Option<u32>) -> Result<Vec<SearchResult>, String> {
+pub async fn kb_embed(kb_id: String) -> Result<EmbedProgress, String> {
+    // Phase 1: Read all un-embedded chunks (sync helper — Connection is not Send)
+    let chunks = read_unembedded_chunks(&kb_id)?;
+
+    let chunks_total = chunks.len();
+    if chunks_total == 0 {
+        return Ok(EmbedProgress {
+            chunks_embedded: 0,
+            chunks_total: 0,
+            chunks_skipped: 0,
+            status: "complete".into(),
+        });
+    }
+
+    println!("[foundry-rag] Embedding {} chunks for KB {}", chunks_total, kb_id);
+
+    // Phase 2: Generate embeddings (async HTTP calls to sidecar)
+    let mut results: Vec<(i64, Vec<u8>)> = Vec::new();
+    let mut chunks_skipped = 0;
+
+    for (chunk_id, chunk_text) in &chunks {
+        let text_to_embed = if chunk_text.len() > 8000 {
+            &chunk_text[..8000]
+        } else {
+            chunk_text.as_str()
+        };
+
+        match embed::embed_text(text_to_embed.to_string()).await {
+            Ok(embedding) => {
+                let blob = embed::embedding_to_blob(&embedding);
+                results.push((*chunk_id, blob));
+
+                if results.len() % 50 == 0 {
+                    println!("[foundry-rag] Embedded {}/{} chunks", results.len(), chunks_total);
+                }
+            }
+            Err(e) => {
+                if results.is_empty() {
+                    return Err(format!(
+                        "Embedding failed (is the helper sidecar running on port 8081?): {}", e
+                    ));
+                }
+                eprintln!("[foundry-rag] Skip embedding chunk {}: {}", chunk_id, e);
+                chunks_skipped += 1;
+            }
+        }
+    }
+
+    // Phase 3: Store embeddings back to DB (sync helper)
+    let chunks_embedded = results.len();
+    store_embeddings(&results)?;
+
+    println!("[foundry-rag] Embedding complete: {}/{} embedded, {} skipped",
+        chunks_embedded, chunks_total, chunks_skipped);
+
+    Ok(EmbedProgress {
+        chunks_embedded,
+        chunks_total,
+        chunks_skipped,
+        status: if chunks_skipped == 0 { "complete".into() } else { "partial".into() },
+    })
+}
+
+/// Sync helper: read un-embedded chunks from DB.
+fn read_unembedded_chunks(kb_id: &str) -> Result<Vec<(i64, String)>, String> {
+    let conn = open_db()?;
+    init_rag_schema(&conn)?;
+    let mut stmt = conn.prepare(
+        "SELECT id, chunk_text FROM document_chunks \
+         WHERE kb_id = ?1 AND (embedding IS NULL OR LENGTH(embedding) = 0) \
+         ORDER BY id ASC"
+    ).map_err(|e| e.to_string())?;
+    let chunks = stmt.query_map(params![kb_id], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+    }).map_err(|e| e.to_string())?
+      .flatten()
+      .collect();
+    Ok(chunks)
+}
+
+/// Sync helper: store embedding blobs back to DB.
+fn store_embeddings(results: &[(i64, Vec<u8>)]) -> Result<(), String> {
+    let conn = open_db()?;
+    for (chunk_id, blob) in results {
+        conn.execute(
+            "UPDATE document_chunks SET embedding = ?1 WHERE id = ?2",
+            params![blob, chunk_id],
+        ).map_err(|e| format!("Failed to store embedding: {}", e))?;
+    }
+    Ok(())
+}
+
+/// Sync helper: read all embedded chunks from DB for vector search.
+fn read_embedded_chunks(namespace: &Option<String>) -> Result<Vec<(String, String, String, Vec<u8>)>, String> {
     let conn = open_db()?;
     init_rag_schema(&conn)?;
 
+    let has_embeddings: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM document_chunks WHERE embedding IS NOT NULL AND LENGTH(embedding) > 0 LIMIT 1)",
+        [],
+        |row| row.get(0),
+    ).unwrap_or(false);
+
+    if !has_embeddings {
+        return Ok(vec![]);
+    }
+
+    let sql = if let Some(ref ns) = namespace {
+        format!(
+            "SELECT chunk_text, source_path, namespace, embedding \
+             FROM document_chunks \
+             WHERE embedding IS NOT NULL AND LENGTH(embedding) > 0 AND namespace = '{}'",
+            ns.replace('\'', "''")
+        )
+    } else {
+        "SELECT chunk_text, source_path, namespace, embedding \
+         FROM document_chunks \
+         WHERE embedding IS NOT NULL AND LENGTH(embedding) > 0".to_string()
+    };
+
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, Vec<u8>>(3)?,
+        ))
+    }).map_err(|e| e.to_string())?
+      .flatten()
+      .collect();
+    Ok(rows)
+}
+
+/// Search a knowledge base by text query. Returns top-K relevant chunks.
+///
+/// Search cascade (best-first):
+///   1. Vector search (cosine similarity) — when embeddings exist AND sidecar is running
+///   2. FTS5 full-text search with BM25 ranking
+///   3. LIKE pattern matching (fallback)
+#[tauri::command]
+pub async fn kb_search(query: String, namespace: Option<String>, limit: Option<u32>) -> Result<Vec<SearchResult>, String> {
     let k = limit.unwrap_or(5) as usize;
     let query_trimmed = query.trim().to_string();
     if query_trimmed.is_empty() {
         return Ok(vec![]);
     }
 
-    // Try FTS5 first (ranked by BM25 relevance)
+    // --- TIER 1: Vector search (cosine similarity) ---
+    // Read embedded chunk data from DB (sync helper — Connection is not Send)
+    let embedded_chunks = read_embedded_chunks(&namespace)?;
+
+    if !embedded_chunks.is_empty() {
+        // Embed the query (async call to sidecar)
+        if let Ok(query_embedding) = embed::embed_text(query_trimmed.clone()).await {
+            let mut scored: Vec<SearchResult> = embedded_chunks.iter().map(|(text, path, ns, blob)| {
+                let chunk_emb = embed::blob_to_embedding(blob);
+                let sim = embed::cosine_similarity(&query_embedding, &chunk_emb);
+                SearchResult {
+                    chunk_text: text.clone(),
+                    source_path: path.clone(),
+                    similarity: sim,
+                    namespace: ns.clone(),
+                }
+            }).collect();
+
+            scored.sort_by(|a, b| b.similarity.partial_cmp(&a.similarity).unwrap_or(std::cmp::Ordering::Equal));
+            scored.truncate(k);
+
+            if !scored.is_empty() && scored[0].similarity > 0.3 {
+                println!("[foundry-rag] Vector search: {} results (top sim={:.3})",
+                    scored.len(), scored[0].similarity);
+                return Ok(scored);
+            }
+        }
+        // Sidecar offline or low confidence — fall through to FTS5
+    }
+
+    // --- TIER 2: FTS5 full-text search ---
+    let conn = open_db()?;
+    init_rag_schema(&conn)?;
     let fts_available = conn.prepare("SELECT 1 FROM chunks_fts LIMIT 0").is_ok();
 
     if fts_available {
@@ -619,8 +801,8 @@ pub fn kb_delete(kb_id: String) -> Result<(), String> {
 
 /// Build a RAG context string for injection into the system prompt.
 /// Searches all active knowledge bases for content relevant to the query.
-pub fn build_rag_context(query: &str) -> Result<String, String> {
-    let results = kb_search(query.to_string(), None, Some(3))?;
+pub async fn build_rag_context(query: &str) -> Result<String, String> {
+    let results = kb_search(query.to_string(), None, Some(3)).await?;
     if results.is_empty() {
         return Ok(String::new());
     }
