@@ -11,6 +11,8 @@ mod memory;
 mod helper;
 mod binary_verify;
 mod embed;
+mod sandbox;
+mod tool_ops;
 
 use serde::Serialize;
 use tauri::Emitter;
@@ -1232,6 +1234,16 @@ fn main() {
             get_documents_dir,
             // Setup / status
             get_setup_status,
+            // === DIRECTORY WORKSTREAM ===
+            tool_ops::project_link,
+            tool_ops::project_unlink,
+            tool_ops::project_get_active,
+            tool_ops::project_list,
+            tool_ops::tool_read_file,
+            tool_ops::tool_write_file,
+            tool_ops::tool_edit_file,
+            tool_ops::tool_list_dir,
+            tool_ops::tool_run_script,
             // === MEMORY WORKSTREAM (shared infrastructure) ===
             // Embedding service — used by memory subsystem AND RAG indexer.
             // Calls helper sidecar on port 8081 in --embedding mode.
