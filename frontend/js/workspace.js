@@ -719,10 +719,13 @@ const Workspace = {
             ].join('\n');
         }
 
-        // Append tool capabilities (presentation generation, document creation, etc.)
+        // Append tool capabilities (presentation generation, document creation, file operations)
         if (typeof Tools !== 'undefined') {
             sysPrompt += '\n\n' + Tools.getPresentationPrompt();
             sysPrompt += '\n\n' + Tools.getDocumentPrompt();
+        }
+        if (typeof ToolCalls !== 'undefined') {
+            sysPrompt += '\n\n' + ToolCalls.getToolPrompt();
         }
 
         messages.push({ role: 'system', content: sysPrompt });
@@ -885,6 +888,10 @@ const Workspace = {
             // Process for tool outputs (slide JSON → download card)
             if (typeof Tools !== 'undefined') {
                 Tools.processMessage(streamEl);
+            }
+            // Process for agentic tool calls (file ops → expandable cards)
+            if (typeof ToolCalls !== 'undefined') {
+                ToolCalls.processResponse(streamEl);
             }
         }
     },
