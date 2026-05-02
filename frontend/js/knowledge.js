@@ -363,6 +363,7 @@ const Knowledge = {
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
                             <span style="font-size:12px;font-weight:600;color:var(--accent);font-family:var(--font-mono)">${this.escapeHtml(r.source_path)}</span>
                             <span style="font-size:10px;color:var(--text-tertiary);font-family:var(--font-mono)">${r.namespace}</span>
+                            <span style="margin-left:auto;font-size:9px;font-family:var(--font-mono);padding:1px 6px;border-radius:4px;background:rgba(52,211,153,${Math.min(r.similarity * 1.5, 0.3).toFixed(2)});color:rgba(52,211,153,0.9)">${(r.similarity * 100).toFixed(0)}%</span>
                         </div>
                         <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;max-height:80px;overflow:hidden;position:relative">
                             ${this.escapeHtml(r.chunk_text.slice(0, 300))}${r.chunk_text.length > 300 ? '...' : ''}

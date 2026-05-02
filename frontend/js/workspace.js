@@ -725,7 +725,7 @@ const Workspace = {
             sysPrompt += '\n\n' + Tools.getDocumentPrompt();
         }
         if (typeof ToolCalls !== 'undefined') {
-            sysPrompt += '\n\n' + ToolCalls.getToolPrompt();
+            sysPrompt += '\n\n' + await ToolCalls.getToolPrompt();
         }
 
         messages.push({ role: 'system', content: sysPrompt });

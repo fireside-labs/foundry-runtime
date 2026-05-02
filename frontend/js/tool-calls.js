@@ -15,10 +15,20 @@ const ToolCalls = {
     // TOOL SCHEMAS — injected into system prompt so models know
     // what tools are available and how to call them.
     // ============================================================
-    getToolPrompt() {
+    async getToolPrompt() {
+        let projectInfo = '';
+        try {
+            if (window.__TAURI__) {
+                const active = await window.__TAURI__.core.invoke('project_get_active');
+                if (active && active.root) {
+                    projectInfo = `\nCurrent project: "${active.name || 'Untitled'}" at ${active.root}\nAll file paths are relative to this project root.\n`;
+                }
+            }
+        } catch { /* no active project — tools still work if a project is linked */ }
+
         return `
 You have access to the following tools for working with the user's project files. To use a tool, output a JSON code block tagged with \`tool_call\`:
-
+${projectInfo}
 \`\`\`tool_call
 {"name": "list_dir", "arguments": {"rel_path": "."}}
 \`\`\`
