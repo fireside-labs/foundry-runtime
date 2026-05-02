@@ -1,0 +1,78 @@
+# ============================================================================
+# Foundry Runtime — .gitignore
+#
+# Source-only public repo. Binaries ship via GitHub Releases, never via git.
+# ============================================================================
+
+# Rust / Cargo build output
+src-tauri/target/
+src-tauri/Cargo.lock.bak
+
+# Tauri-generated files
+src-tauri/gen/
+
+# Node / npm (frontend dev tooling, if any)
+node_modules/
+dist/
+out/
+.next/
+
+# Built binaries — these belong in GitHub Releases, not the source repo.
+# The Tauri runtime's `download_llama_server` fetches them on first run.
+*.exe
+*.dll
+*.msi
+*.app
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+
+# Model weights — too large for git, distributed separately
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# Secrets / per-user runtime state — never commit
+license.key
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+secrets.json
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Tauri code-signing artifacts (when set up)
+src-tauri/.cargo/
+src-tauri/private-keys/
+
+# Local dev scratch — never push
+scratch/
+todo.local.md
+NOTES.local.md
+
+# Vercel (in case this repo is ever wired to Vercel for the dashboard)
+.vercel/

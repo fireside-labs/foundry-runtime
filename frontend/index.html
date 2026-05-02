@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foundry Enterprise Runtime</title>
+    <meta name="description" content="Foundry Runtime — Local AI inference for the enterprise.">
+    <link rel="stylesheet" href="css/foundry.css">
+</head>
+<body>
+    <!-- Ambient glow orbs (copper accent) -->
+    <div class="ambient-glow indigo"></div>
+    <div class="ambient-glow cyan"></div>
+    <div class="grid-overlay"></div>
+
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <div class="logo-icon">F</div>
+                <span class="logo-text">Foundry</span>
+            </div>
+            <div style="flex:1"></div>
+            <span class="text-mono" style="font-size:10px;color:var(--text-tertiary);letter-spacing:1.5px;text-transform:uppercase">v1.0.0</span>
+        </header>
+
+        <!-- Body -->
+        <div class="app-body">
+            <!-- Sidebar (hidden during installer) -->
+            <nav class="sidebar" id="sidebar" style="display:none">
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Workspace</div>
+                    <div class="sidebar-item active" data-page="workspace" id="nav-workspace">
+                        <span class="icon">💬</span>
+                        <span>Chat</span>
+                    </div>
+                    <div class="sidebar-item" data-page="models" id="nav-models">
+                        <span class="icon">⬡</span>
+                        <span>Models</span>
+                    </div>
+                    <div class="sidebar-item" data-page="memory" id="nav-memory">
+                        <span class="icon">🧠</span>
+                        <span>Memory</span>
+                        <span class="memory-badge" id="memory-badge" style="display:none;margin-left:auto;background:var(--accent);color:#000;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:600"></span>
+                    </div>
+                    <div class="sidebar-item" data-page="settings" id="nav-settings">
+                        <span class="icon">⚙</span>
+                        <span>Settings</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="projects-section">
+                    <div class="sidebar-section-title flex justify-between items-center">
+                        <span>Projects</span>
+                        <button class="btn btn-ghost btn-sm" id="btn-new-project" title="New Project" style="font-size:16px;padding:2px 8px">+</button>
+                    </div>
+                    <div id="project-list"></div>
+                </div>
+
+                <div style="flex:1"></div>
+
+                <div class="sidebar-section" style="border-top:1px solid rgba(255,255,255,0.05);padding-top:var(--space-md)">
+                    <div id="sidebar-license" class="sidebar-item" style="font-size:12px">
+                        <span class="icon">◆</span>
+                        <span class="text-muted">No License</span>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Installer Page -->
+                <div class="page active" id="page-installer">
+                    <div class="installer" id="installer-container"></div>
+                </div>
+
+                <!-- Workspace Page -->
+                <div class="page" id="page-workspace" style="padding:0"></div>
+
+                <!-- Models Page -->
+                <div class="page" id="page-models">
+                    <h1 class="installer-headline tracking-tight">Model Management</h1>
+                    <p class="installer-subtext mb-lg" style="margin:0 0 var(--space-lg) 0">Manage your deployed models and import custom domain-tuned variants.</p>
+                    <div id="model-grid-container"></div>
+                </div>
+
+                <!-- Memory Page -->
+                <div class="page" id="page-memory">
+                    <div id="memory-dashboard"></div>
+                </div>
+
+                <!-- Settings Page -->
+                <div class="page" id="page-settings">
+                    <h1 class="installer-headline tracking-tight">Settings</h1>
+                    <p class="installer-subtext mb-lg" style="margin:0 0 var(--space-lg) 0">License, runtime configuration, and hardware status.</p>
+                    <div class="card" style="max-width:600px">
+                        <div class="card-title">License</div>
+                        <div class="card-subtitle mb-md">Your Foundry Runtime license and hardware binding status.</div>
+                        <div id="settings-license-info"></div>
+                    </div>
+                    <div class="card mt-lg" style="max-width:600px">
+                        <div class="card-title">Runtime</div>
+                        <div class="card-subtitle mb-md">Inference server configuration.</div>
+                        <div id="settings-runtime-info"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="statusbar" id="statusbar" style="display:none">
+            <div class="status-item">
+                <div class="status-dot offline" id="status-dot"></div>
+                <span id="status-server">Offline</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item">
+                <span class="status-label">Model</span>
+                <span id="status-model">—</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item">
+                <span class="status-label">VRAM</span>
+                <span id="status-vram">—</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item">
+                <span class="status-label">Tok/s</span>
+                <span id="status-tps">—</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item">
+                <span class="status-label">Temp</span>
+                <span id="status-temp">—</span>
+            </div>
+            <div style="flex:1"></div>
+            <div class="status-item">
+                <span class="status-endpoint" id="status-endpoint" title="Click to copy">http://127.0.0.1:8080</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- pptxgenjs — PowerPoint generation in-browser -->
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/installer.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/tools.js"></script>
+    <script src="js/workspace.js"></script>
+    <script src="js/memory.js"></script>
+    <script src="js/statusbar.js"></script>
+</body>
+</html>

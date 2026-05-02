@@ -1,0 +1,47 @@
+{
+    "productName": "Foundry Runtime",
+    "version": "1.0.0",
+    "identifier": "ai.foundry.runtime",
+    "build": {
+        "frontendDist": "../frontend",
+        "devUrl": "http://localhost:5500"
+    },
+    "app": {
+        "withGlobalTauri": true,
+        "windows": [
+            {
+                "title": "Foundry Enterprise Runtime",
+                "width": 1440,
+                "height": 900,
+                "minWidth": 1024,
+                "minHeight": 700,
+                "center": true,
+                "resizable": true,
+                "fullscreen": false,
+                "decorations": true
+            }
+        ],
+        "security": {
+            "csp": "default-src 'self'; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:"
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ],
+        "windows": {
+            "certificateThumbprint": null,
+            "digestAlgorithm": "sha256",
+            "nsis": {
+                "installMode": "currentUser",
+                "displayLanguageSelector": false
+            }
+        }
+    }
+}

@@ -1,0 +1,33 @@
+{
+    "$schema": "https://raw.githubusercontent.com/nicholasVilela/tauri-plugin-capabilities/main/schema.json",
+    "identifier": "main-window",
+    "description": "Foundry Enterprise Runtime — main window capabilities",
+    "windows": ["main"],
+    "permissions": [
+        "core:default",
+        "core:window:default",
+        "core:window:allow-close",
+        "core:window:allow-set-title",
+        "core:window:allow-set-size",
+        "core:window:allow-set-fullscreen",
+        "core:window:allow-center",
+        "core:window:allow-minimize",
+        "core:window:allow-maximize",
+        "core:window:allow-unmaximize",
+        "core:window:allow-is-maximized",
+        "core:window:allow-show",
+        "core:window:allow-hide",
+        "core:app:default",
+        "core:app:allow-version",
+        "shell:allow-open"
+    ],
+    "denied_permissions": [
+        "core:window:allow-set-decorations",
+        "shell:allow-execute",
+        "fs:default",
+        "http:default",
+        "http:allow-fetch",
+        "process:allow-restart",
+        "process:allow-exit"
+    ]
+}
