@@ -1443,3 +1443,113 @@ html, body {
     margin: 0 0 var(--space-sm) 0;
     line-height: 1.5;
 }
+
+/* --- Memory page Pro lock-screen ---
+   This is a conversion surface, not a 404. Designed to demonstrate what Pro
+   unlocks with enough texture that a CIO who lands here gets the message in
+   one screen. Copper accent rule, generous whitespace, mono-eyebrow framing. */
+
+.mem-locked-shell {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-md);
+}
+
+.mem-locked-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--space-sm);
+    padding-left: 2px;
+    border-left: 3px solid var(--accent);
+    padding: 4px 0 4px 12px;
+    margin-left: -15px;
+}
+
+.mem-locked-title {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin: 0 0 var(--space-md) 0;
+    color: var(--text-primary);
+}
+
+.mem-locked-lede {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 0 var(--space-xl) 0;
+}
+
+/* Five-cognitive-types grid — three columns on desktop, single column on narrow */
+.mem-pro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+
+@media (max-width: 700px) {
+    .mem-pro-grid { grid-template-columns: 1fr; }
+}
+
+.mem-pro-feature {
+    padding: var(--space-md);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.mem-pro-feature:hover {
+    border-color: rgba(200, 117, 51, 0.35);
+    background: rgba(200, 117, 51, 0.03);
+}
+
+.mem-pro-feature-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.mem-pro-feature-desc {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+/* CTA box — copper-bordered, the only place on the page with strong color */
+.mem-locked-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(200, 117, 51, 0.06) 0%, rgba(200, 117, 51, 0.02) 100%);
+}
+
+.mem-locked-cta-text { flex: 1; }
+
+.mem-locked-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.mem-locked-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}

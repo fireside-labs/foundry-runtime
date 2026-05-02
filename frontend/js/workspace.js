@@ -112,6 +112,9 @@ const Workspace = {
         if (!conv || !conv.messages || conv.messages.length < 4) return;
         if (conv.id === this._lastDreamedConvId) return;
         if (!window.__TAURI__) return;
+        // Pro gate: persistent cross-session memory is a Pro feature. Free-tier
+        // chat works fine, just doesn't get auto-summarized into the memory DB.
+        if (typeof App !== 'undefined' && !App.hasPro()) return;
 
         this._lastDreamedConvId = conv.id;
 
@@ -724,9 +727,13 @@ const Workspace = {
 
         messages.push({ role: 'system', content: sysPrompt });
 
-        // --- Inject persistent memory context ---
+        // --- Inject persistent memory context (Pro tier only) ---
+        // Free-tier users get within-session chat history only — no cross-session
+        // memory injection. Per freemium spec: persistent memory is the headline
+        // Pro feature alongside Roundtable.
         try {
-            if (window.__TAURI__) {
+            const memoryGated = typeof App !== 'undefined' && !App.hasPro();
+            if (window.__TAURI__ && !memoryGated) {
                 const memCtx = await window.__TAURI__.core.invoke('mem_build_context');
                 if (memCtx && memCtx.trim().length > 0) {
                     messages.push({ role: 'system', content: memCtx });

@@ -18,10 +18,66 @@
         const container = document.getElementById('memory-dashboard');
         if (!container) return;
 
+        // Pro gate: free-tier users get the upgrade callout, not the dashboard.
+        // The sidebar Pro-gate already redirects most clicks to Calendly, but this
+        // is defense-in-depth: if the page does load (race condition, license expiry,
+        // or direct programmatic navigation), the page itself stays locked.
+        if (typeof App !== 'undefined' && !App.hasPro()) {
+            container.innerHTML = buildLockedStateHTML();
+            return;
+        }
+
         container.innerHTML = buildDashboardHTML();
         attachEvents();
         await refreshAll();
     };
+
+    // Locked-state UI for free-tier users — this is a Pro-conversion surface.
+    // Brand: copper accents, obsidian dark, JetBrains Mono labels.
+    // Lists what Pro memory unlocks + Calendly CTA.
+    function buildLockedStateHTML() {
+        const memoryTypes = [
+            { name: 'Core Identity',     desc: 'Always-loaded context. What the AI knows about you on every prompt.' },
+            { name: 'Facts & Knowledge', desc: 'Long-term semantic memory. Names, preferences, project details — recalled when relevant.' },
+            { name: 'Conversations',     desc: 'Episodic memory of past dialogues. Searchable, summarizable, never lost.' },
+            { name: 'Procedures',        desc: 'Learned workflows. The AI captures how you do things and reapplies them.' },
+            { name: 'Audit Trail',       desc: 'Every memory change tracked. Tamper-evident, exportable, defensible to compliance.' },
+        ];
+        const featureRows = memoryTypes.map(m => `
+            <div class="mem-pro-feature">
+                <div class="mem-pro-feature-name">${m.name}</div>
+                <div class="mem-pro-feature-desc">${m.desc}</div>
+            </div>
+        `).join('');
+        return `
+            <div class="mem-locked-shell">
+                <div class="mem-locked-eyebrow">PRO FEATURE</div>
+                <h1 class="mem-locked-title">Persistent Memory.</h1>
+                <p class="mem-locked-lede">
+                    Your Foundry assistant remembers facts, preferences, conversations, and learned procedures
+                    across every session. Five cognitive memory types that compound over time —
+                    locally, on your hardware, never sent to the cloud.
+                </p>
+
+                <div class="mem-pro-grid">
+                    ${featureRows}
+                </div>
+
+                <div class="mem-locked-cta">
+                    <div class="mem-locked-cta-text">
+                        <div class="mem-locked-price">Pro · <span class="text-mono">$249/year</span></div>
+                        <div class="mem-locked-sub">
+                            Persistent memory + Roundtable mode + premium templates + PowerPoint export.
+                            Hardware-bound license. 20-minute intro call to discuss your use case.
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="App.requestProAccess('memory-lockscreen')">
+                        Request Pro Key →
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 
     // -----------------------------------------------------------------------
     // Dashboard HTML
