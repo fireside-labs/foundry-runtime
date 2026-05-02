@@ -13,6 +13,7 @@ mod binary_verify;
 mod embed;
 mod sandbox;
 mod tool_ops;
+mod rag;
 
 use serde::Serialize;
 use tauri::Emitter;
@@ -1233,6 +1234,12 @@ fn main() {
             eprintln!("[foundry] Memory DB init failed: {}", e);
         } else {
             println!("[foundry] Memory engine ready");
+            // Initialize RAG schema in the same database
+            if let Err(e) = rag::init_rag_schema(&conn) {
+                eprintln!("[foundry] RAG schema init failed: {}", e);
+            } else {
+                println!("[foundry] RAG engine ready");
+            }
         }
     }
 
@@ -1289,6 +1296,12 @@ fn main() {
             tool_ops::tool_edit_file,
             tool_ops::tool_list_dir,
             tool_ops::tool_run_script,
+            // Knowledge Base (RAG)
+            rag::kb_create,
+            rag::kb_index,
+            rag::kb_search,
+            rag::kb_list,
+            rag::kb_delete,
             // === MEMORY WORKSTREAM (shared infrastructure) ===
             // Embedding service — used by memory subsystem AND RAG indexer.
             // Calls helper sidecar on port 8081 in --embedding mode.
