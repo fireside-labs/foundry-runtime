@@ -97,6 +97,25 @@ pub fn init_rag_schema(conn: &Connection) -> Result<(), String> {
         CREATE INDEX IF NOT EXISTS idx_chunks_ns ON document_chunks(namespace);
     ").map_err(|e| format!("RAG schema init failed: {}", e))?;
 
+    // FTS5 virtual table for full-text search with BM25 ranking.
+    // content= makes it an external-content table backed by document_chunks.
+    // This is idempotent — CREATE IF NOT EXISTS works for virtual tables.
+    match conn.execute_batch("
+        CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+            chunk_text,
+            source_path,
+            namespace,
+            content='document_chunks',
+            content_rowid='id'
+        );
+    ") {
+        Ok(_) => println!("[foundry-rag] FTS5 index ready"),
+        Err(e) => {
+            // FTS5 might not be available in all builds — degrade gracefully
+            eprintln!("[foundry-rag] FTS5 not available, falling back to LIKE: {}", e);
+        }
+    }
+
     Ok(())
 }
 
@@ -431,6 +450,12 @@ pub fn kb_index(kb_id: String) -> Result<IndexProgress, String> {
         params![chunks_created as i64, files_processed as i64, kb_id],
     ).map_err(|e| e.to_string())?;
 
+    // Rebuild FTS5 index to include new chunks
+    match conn.execute_batch("INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')") {
+        Ok(_) => println!("[foundry-rag] FTS5 index rebuilt"),
+        Err(e) => eprintln!("[foundry-rag] FTS5 rebuild skipped: {}", e),
+    }
+
     println!("[foundry-rag] Indexed: {} files, {} chunks", files_processed, chunks_created);
 
     Ok(IndexProgress {
@@ -443,30 +468,100 @@ pub fn kb_index(kb_id: String) -> Result<IndexProgress, String> {
 }
 
 /// Search a knowledge base by text query. Returns top-K relevant chunks.
-/// Uses FTS text matching for v0.1.0; vector similarity when embeddings available.
+/// Uses FTS5 full-text search with BM25 ranking when available,
+/// falls back to LIKE matching otherwise.
 #[tauri::command]
 pub fn kb_search(query: String, namespace: Option<String>, limit: Option<u32>) -> Result<Vec<SearchResult>, String> {
     let conn = open_db()?;
     init_rag_schema(&conn)?;
 
     let k = limit.unwrap_or(5) as usize;
+    let query_trimmed = query.trim().to_string();
+    if query_trimmed.is_empty() {
+        return Ok(vec![]);
+    }
 
-    // Text-based search (FTS-like with LIKE matching)
-    let pattern = format!("%{}%", query.trim());
+    // Try FTS5 first (ranked by BM25 relevance)
+    let fts_available = conn.prepare("SELECT 1 FROM chunks_fts LIMIT 0").is_ok();
+
+    if fts_available {
+        // Build FTS5 query: split into tokens, join with AND for multi-word queries
+        let fts_query = query_trimmed
+            .split_whitespace()
+            .map(|w| {
+                // Escape special FTS5 chars and add prefix matching
+                let clean: String = w.chars().filter(|c| c.is_alphanumeric() || *c == '_').collect();
+                if clean.is_empty() { String::new() } else { format!("{}*", clean) }
+            })
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        if !fts_query.is_empty() {
+            let sql = if let Some(ref ns) = namespace {
+                format!(
+                    "SELECT dc.chunk_text, dc.source_path, dc.namespace, bm25(chunks_fts) as rank \
+                     FROM chunks_fts \
+                     JOIN document_chunks dc ON dc.id = chunks_fts.rowid \
+                     WHERE chunks_fts MATCH ?1 AND dc.namespace = '{}' \
+                     ORDER BY rank \
+                     LIMIT {}",
+                    ns.replace('\'', "''"), k
+                )
+            } else {
+                format!(
+                    "SELECT dc.chunk_text, dc.source_path, dc.namespace, bm25(chunks_fts) as rank \
+                     FROM chunks_fts \
+                     JOIN document_chunks dc ON dc.id = chunks_fts.rowid \
+                     WHERE chunks_fts MATCH ?1 \
+                     ORDER BY rank \
+                     LIMIT {}",
+                    k
+                )
+            };
+
+            match conn.prepare(&sql) {
+                Ok(mut stmt) => {
+                    let rows = stmt.query_map(params![fts_query], |row| {
+                        let rank: f64 = row.get(3)?;
+                        Ok(SearchResult {
+                            chunk_text: row.get(0)?,
+                            source_path: row.get(1)?,
+                            // BM25 returns negative scores (lower = better), normalize to 0-1
+                            similarity: (1.0 / (1.0 + rank.abs())) as f32,
+                            namespace: row.get(2)?,
+                        })
+                    }).map_err(|e| e.to_string())?;
+
+                    let results: Vec<SearchResult> = rows.flatten().collect();
+                    if !results.is_empty() {
+                        return Ok(results);
+                    }
+                    // If FTS5 returned empty, fall through to LIKE
+                }
+                Err(_) => {
+                    // FTS5 query failed, fall through to LIKE
+                }
+            }
+        }
+    }
+
+    // Fallback: LIKE matching (slower, no ranking)
+    let pattern = format!("%{}%", query_trimmed);
 
     let sql = if let Some(ref ns) = namespace {
         format!(
-            "SELECT chunk_text, source_path, namespace, embedding FROM document_chunks \
+            "SELECT chunk_text, source_path, namespace FROM document_chunks \
              WHERE namespace = '{}' AND chunk_text LIKE ?1 \
              ORDER BY LENGTH(chunk_text) ASC LIMIT {}",
-            ns.replace('\'', "''"), k * 3
+            ns.replace('\'', "''"), k
         )
     } else {
         format!(
-            "SELECT chunk_text, source_path, namespace, embedding FROM document_chunks \
+            "SELECT chunk_text, source_path, namespace FROM document_chunks \
              WHERE chunk_text LIKE ?1 \
              ORDER BY LENGTH(chunk_text) ASC LIMIT {}",
-            k * 3
+            k
         )
     };
 
@@ -475,14 +570,12 @@ pub fn kb_search(query: String, namespace: Option<String>, limit: Option<u32>) -
         Ok(SearchResult {
             chunk_text: row.get(0)?,
             source_path: row.get(1)?,
-            similarity: 0.5, // Placeholder for text match
+            similarity: 0.3, // Lower confidence for LIKE matches
             namespace: row.get(2)?,
         })
     }).map_err(|e| e.to_string())?;
 
-    let mut results: Vec<SearchResult> = rows.flatten().collect();
-    results.truncate(k);
-
+    let results: Vec<SearchResult> = rows.flatten().collect();
     Ok(results)
 }
 
