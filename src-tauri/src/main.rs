@@ -10,6 +10,7 @@
 mod memory;
 mod helper;
 mod binary_verify;
+mod embed;
 
 use serde::Serialize;
 use tauri::Emitter;
@@ -1231,6 +1232,11 @@ fn main() {
             get_documents_dir,
             // Setup / status
             get_setup_status,
+            // === MEMORY WORKSTREAM (shared infrastructure) ===
+            // Embedding service — used by memory subsystem AND RAG indexer.
+            // Calls helper sidecar on port 8081 in --embedding mode.
+            embed::embed_text,
+            embed::namespace_validate,
         ])
         .manage(backend_state.clone())
         .manage(helper_state.clone())
