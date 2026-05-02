@@ -1,6 +1,6 @@
 {
     "productName": "Foundry Runtime",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "identifier": "ai.foundry.runtime",
     "build": {
         "frontendDist": "../frontend",
@@ -28,6 +28,12 @@
     "bundle": {
         "active": true,
         "targets": "all",
+        "publisher": "Fireside Labs",
+        "homepage": "https://firesidelabs.ai",
+        "category": "DeveloperTool",
+        "shortDescription": "Local AI inference for the enterprise.",
+        "longDescription": "Foundry Runtime is a desktop application that runs large language models entirely on your hardware. Pick a model from the catalog, run a local inference server with an OpenAI-compatible API, and chat with it through a polished workspace UI. Pro tier unlocks Roundtable mode, premium templates, PowerPoint export, and persistent memory.",
+        "copyright": "Copyright (c) 2026 Fireside Labs",
         "resources": [
             "binaries.json",
             "binaries/*"
