@@ -1,0 +1,15 @@
+{
+  "_doc": "Public binary fingerprints for Foundry Runtime. Tauri Rust verifies bundled binaries against this manifest at startup (SHA256, fail-closed on mismatch). Update this file ONLY when cutting a new public release. Do NOT include internal build paths, build-host names, or compile-time metadata other than fields listed in the schema.",
+  "version": "0.1.0",
+  "schema_version": "1",
+  "binaries": {
+    "llama-server.exe": {
+      "sha256": "PLACEHOLDER_FILL_AT_V0_1_0_BUILD",
+      "size_bytes": 0,
+      "platform": "windows-x64",
+      "build_tag": "PLACEHOLDER",
+      "license": "MIT (llama.cpp upstream)",
+      "upstream": "https://github.com/ggml-org/llama.cpp"
+    }
+  }
+}

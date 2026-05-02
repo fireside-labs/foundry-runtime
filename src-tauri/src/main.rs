@@ -5,6 +5,7 @@
 
 mod memory;
 mod helper;
+mod binary_verify;
 
 // CLI flag the bundled llama-server fork accepts for the Pro-tier license key.
 // If the fork's flag name is renamed in a future rebuild, update this constant.
@@ -631,6 +632,19 @@ fn start_llama_server(state: tauri::State<'_, Arc<Mutex<BackendState>>>) -> Resu
 
     let binary = find_llama_server()
         .ok_or("llama-server not found. Place llama-server.exe in ~/.foundry/bin/ to get started.")?;
+
+    // Verify bundled binary against the public manifest (binaries.json).
+    // Fail-closed on hash mismatch; skip silently in dev builds where the manifest still
+    // contains placeholder SHAs (we don't gate developers on a not-yet-cut release manifest).
+    if !binary_verify::is_placeholder_manifest() {
+        let exe_name = if cfg!(target_os = "windows") { "llama-server.exe" } else { "llama-server" };
+        if let Err(e) = binary_verify::verify_binary(std::path::Path::new(&binary), exe_name) {
+            return Err(format!(
+                "Binary verification failed: {}. Refusing to launch a tampered or unrecognized binary.",
+                e
+            ));
+        }
+    }
 
     // Kill existing server
     {
