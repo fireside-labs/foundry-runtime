@@ -1,17 +1,17 @@
-# Foundry Runtime — v0.1.0+ build pipeline
+# Foundry Runtime - v0.1.0+ build pipeline
 #
 # Usage (from repo root):
-#     .\scripts\build-release.ps1 -Version 0.1.0 -BuildTag llamacpp-bXXXX-licensekey
+#     .\scripts\build-release.ps1 -Version 0.1.0 -BuildTag llamacpp-b8999-stock-cpu-x64
 #
 # What this does:
 #   1. Verifies expected binaries are present in src-tauri/binaries/
 #   2. Computes SHA256 + size for each binary
 #   3. Updates src-tauri/binaries.json with real values (replacing PLACEHOLDERs)
-#   4. Runs `cargo tauri build` to produce signed (or unsigned) .msi + .exe installers
-#   5. Reports output paths and the manifest delta
+#   4. Runs `cargo tauri build` to produce installers
+#   5. Reports output paths
 #
-# Designed to be re-runnable: if binaries.json already has real hashes, it just
-# verifies they still match the binaries on disk before invoking cargo tauri build.
+# Designed to be re-runnable. If binaries.json already has real hashes, this
+# just verifies they still match before running cargo tauri build.
 
 [CmdletBinding()]
 param(
@@ -23,7 +23,6 @@ param(
 
     [string]$BundleTargets = "msi nsis",
 
-    # Optional: skip the cargo tauri build step (just refresh the manifest)
     [switch]$SkipBuild
 )
 
@@ -54,11 +53,10 @@ $expectedExe = Join-Path $binariesDir "llama-server.exe"
 if (-not (Test-Path $expectedExe)) {
     Write-Host "FAIL: $expectedExe not present." -ForegroundColor Red
     Write-Host "      Drop the compiled llama-server.exe into src-tauri/binaries/ before running this script."
-    Write-Host "      It must be the public fork (with --license-key flag, NOT --srht-key)."
     throw "Required binary missing."
 }
 
-# --- 2. Compute hashes for everything in binaries/ that's an exe or dll ---
+# --- 2. Compute hashes ---
 
 Write-Host "Hashing binaries..." -ForegroundColor Yellow
 $binaryEntries = @{}
@@ -80,7 +78,9 @@ Get-ChildItem $binariesDir -File | Where-Object {
     }
 
     $binaryEntries[$name] = $entry
-    Write-Host ("  {0,-32} {1,12:N0} bytes  {2}" -f $name, $size, $sha.Substring(0, 16))
+    $shortHash = $sha.Substring(0, 16)
+    $sizeStr = "{0:N0}" -f $size
+    Write-Host "  $name  $sizeStr bytes  $shortHash"
 }
 
 if ($binaryEntries.Count -eq 0) {
@@ -92,9 +92,8 @@ if ($binaryEntries.Count -eq 0) {
 Write-Host ""
 Write-Host "Updating $manifestPath..." -ForegroundColor Yellow
 
-# Build the JSON structure manually — preserves field order and comments-as-keys.
 $manifest = [ordered]@{
-    "_doc" = "Public binary fingerprints for Foundry Runtime. Tauri Rust verifies bundled binaries against this manifest at startup (SHA256, fail-closed on mismatch). Update this file ONLY when cutting a new public release. Do NOT include internal build paths, build-host names, or compile-time metadata other than fields listed in the schema."
+    "_doc" = "Public binary fingerprints for Foundry Runtime. Tauri Rust verifies bundled binaries against this manifest at startup (SHA256, fail-closed on mismatch). Update this file ONLY when cutting a new public release."
     version = $Version
     schema_version = "1"
     binaries = $binaryEntries
@@ -109,7 +108,7 @@ Write-Host "  Manifest written. Version=$Version, $($binaryEntries.Count) binari
 
 if ($SkipBuild) {
     Write-Host ""
-    Write-Host "SkipBuild flag set — stopping here. Manifest is up to date." -ForegroundColor Cyan
+    Write-Host "SkipBuild flag set - stopping here. Manifest is up to date." -ForegroundColor Cyan
     exit 0
 }
 
@@ -132,14 +131,15 @@ $bundleDir = Join-Path $srcTauri "target\release\bundle"
 Write-Host ""
 Write-Host "Build complete. Output artifacts:" -ForegroundColor Green
 Get-ChildItem -Recurse -Path $bundleDir -Include @("*.msi", "*.exe") -File | ForEach-Object {
-    Write-Host ("  {0,12:N0} bytes  {1}" -f $_.Length, $_.FullName.Replace($repoRoot, "."))
+    $sizeStr = "{0:N0}" -f $_.Length
+    $relPath = $_.FullName.Replace($repoRoot, ".")
+    Write-Host "  $sizeStr bytes  $relPath"
 }
 
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  - If signing is configured (Azure Trusted Signing), the .msi is already signed."
-Write-Host "  - Run strings audit on the .msi for OPSEC verification before release:"
-Write-Host "      strings *.msi | grep -iE 'graft|surgery|FFN|MESH|Freya|Heimdall|SRHT|wildclaw|chimera'"
-Write-Host "  - Test on a clean Windows VM (no CUDA installed → CPU fallback path)."
+Write-Host "  - Run strings audit on the .msi for OPSEC verification before release."
+Write-Host "  - Test on a clean Windows VM."
 Write-Host "  - Upload .msi as a GitHub Release asset on fireside-labs/foundry-runtime."
 Write-Host ""
