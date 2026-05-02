@@ -223,10 +223,13 @@ const Knowledge = {
 
                 <div>
                     <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px">Folder Path</label>
-                    <input type="text" class="input" id="kb-path-input" placeholder="C:\\Users\\you\\project or /home/you/project"
-                        style="width:100%;padding:10px 14px;font-size:14px;font-family:var(--font-mono)">
+                    <div style="display:flex;gap:var(--space-sm)">
+                        <input type="text" class="input" id="kb-path-input" placeholder="Select a folder..."
+                            style="flex:1;padding:10px 14px;font-size:14px;font-family:var(--font-mono)" readonly>
+                        <button class="btn btn-secondary" id="kb-browse-btn" style="white-space:nowrap">📁 Browse</button>
+                    </div>
                     <div style="font-size:10px;color:var(--text-tertiary);margin-top:4px;font-family:var(--font-mono)">
-                        Absolute path to the project folder. All supported files will be indexed.
+                        All supported files in this folder will be indexed recursively.
                     </div>
                 </div>
 
@@ -289,6 +292,34 @@ const Knowledge = {
 
         // Auto-focus namespace input
         setTimeout(() => document.getElementById('kb-namespace-input')?.focus(), 100);
+
+        // Browse button — native folder picker via Tauri dialog plugin
+        document.getElementById('kb-browse-btn')?.addEventListener('click', async () => {
+            try {
+                // Tauri v2 dialog API
+                const selected = await window.__TAURI__.core.invoke('plugin:dialog|open', {
+                    directory: true,
+                    multiple: false,
+                    title: 'Select Project Folder',
+                });
+                if (selected) {
+                    const pathInput = document.getElementById('kb-path-input');
+                    if (pathInput) {
+                        pathInput.value = selected;
+                        pathInput.style.color = 'var(--accent)';
+                    }
+                }
+            } catch (e) {
+                console.warn('[knowledge] Folder picker unavailable, enabling manual input:', e);
+                // Fallback: make the input editable
+                const pathInput = document.getElementById('kb-path-input');
+                if (pathInput) {
+                    pathInput.removeAttribute('readonly');
+                    pathInput.placeholder = 'C:\\Users\\you\\project or /home/you/project';
+                    pathInput.focus();
+                }
+            }
+        });
     },
 
     // ============================================================
