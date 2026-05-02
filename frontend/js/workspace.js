@@ -317,7 +317,7 @@ const Workspace = {
                                 ? '<button class="btn btn-ghost btn-sm" id="btn-export" title="Export as Markdown" style="font-size:14px">📄</button>'
                                 : ''}
                             <button class="btn btn-sm btn-secondary" id="btn-new-solo">+ Solo</button>
-                            <button class="btn btn-sm btn-primary" id="btn-new-roundtable" style="font-size:10px">+ Roundtable</button>
+                            <button class="btn btn-sm btn-primary pro-feature" id="btn-new-roundtable" data-pro-source="roundtable" style="font-size:10px">+ Roundtable</button>
                         </div>
                     </div>
                     <div class="chat-messages" id="chat-messages">

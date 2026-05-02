@@ -458,7 +458,7 @@ Rules:
                                             `<option value="${t.id}" ${t.id === this.selectedTemplate ? 'selected' : ''}>${t.name}</option>`
                                         ).join('')}
                                     </select>
-                                    <button class="btn btn-primary btn-sm download-pptx-btn" style="white-space:nowrap">
+                                    <button class="btn btn-primary btn-sm download-pptx-btn pro-feature" data-pro-source="pptx-export" style="white-space:nowrap">
                                         ↓ Download .pptx
                                     </button>
                                 </div>
@@ -479,6 +479,8 @@ Rules:
                         });
 
                         pre.replaceWith(card);
+                        // Apply Pro gating to the freshly-inserted download button (free-tier users see PRO badge + upgrade route).
+                        if (typeof App !== 'undefined' && App.applyProGates) App.applyProGates();
                     }
                 } catch (e) {
                     // Not valid JSON, leave as-is
