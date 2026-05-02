@@ -1,15 +1,15 @@
 // Foundry Runtime — Tauri v2 entry point
-// Local AI inference for the enterprise. Hardware-bound license layer for Pro tier.
+// Local AI inference for the enterprise. Pro-tier license gating is enforced
+// at the application layer (workspace UI features), not at the inference binary
+// layer. v0.1.0 ships with stock upstream llama-server from ggml-org/llama.cpp;
+// any future Fireside-built llama-server with a real license-key flag would
+// add that flag-passing logic here.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod memory;
 mod helper;
 mod binary_verify;
-
-// CLI flag the bundled llama-server fork accepts for the Pro-tier license key.
-// If the fork's flag name is renamed in a future rebuild, update this constant.
-const LICENSE_FLAG: &str = "--srht-key";
 
 use serde::Serialize;
 use tauri::Emitter;
@@ -659,9 +659,11 @@ fn start_llama_server(state: tauri::State<'_, Arc<Mutex<BackendState>>>) -> Resu
 
     thread::sleep(std::time::Duration::from_millis(300));
 
-    // Read license key for hardware-bound encryption seed (Pro tier)
-    let license_path = ensure_foundry_dirs().join("license.key");
-    let mut cmd_args = vec![
+    // v0.1.0 ships with stock upstream llama-server (no license-key flag support).
+    // Pro-tier gating happens at the workspace UI layer; the inference binary
+    // is feature-equivalent across tiers. If a future Fireside-built llama-server
+    // adds a license-key CLI flag, append it to cmd_args here when license.key exists.
+    let cmd_args = vec![
         "--model".to_string(), model_path.to_string_lossy().to_string(),
         "--port".to_string(), "8080".to_string(),
         "--host".to_string(), "127.0.0.1".to_string(),
@@ -669,14 +671,6 @@ fn start_llama_server(state: tauri::State<'_, Arc<Mutex<BackendState>>>) -> Resu
         "--n-gpu-layers".to_string(), "99".to_string(),
         "--flash-attn".to_string(), "on".to_string(),
     ];
-
-    // Pass license key as hardware-bound encryption seed if available (Pro tier).
-    if license_path.exists() {
-        if let Ok(key) = fs::read_to_string(&license_path) {
-            cmd_args.push(LICENSE_FLAG.to_string());
-            cmd_args.push(key.trim().to_string());
-        }
-    }
 
     println!("[foundry] Starting llama-server: {} {}", binary, cmd_args.join(" "));
 
@@ -1245,13 +1239,13 @@ fn main() {
             let foundry = ensure_foundry_dirs();
             println!("[foundry] Initialized {}", foundry.display());
 
-            let license_path = foundry.join("license.key");
-
             // Use portable model discovery (primary: ~/.foundry/models)
             let model_dirs = model_search_dirs();
             let has_models = model_dirs.iter().any(|d| d.exists());
 
-            if has_models && license_path.exists() {
+            // Auto-start the server if any models are present. Free-tier users
+            // get full chat — license gating only applies to Pro features in the UI.
+            if has_models {
                 let state = state_for_setup.clone();
 
                 thread::spawn(move || {
@@ -1284,7 +1278,9 @@ fn main() {
                         }
                     };
 
-                    let mut args: Vec<String> = vec![
+                    // Stock upstream llama-server invocation. Pro-tier gating is
+                    // enforced at the workspace UI layer, not here.
+                    let args: Vec<String> = vec![
                         "--model".into(), model_path.to_string_lossy().to_string(),
                         "--port".into(), "8080".into(),
                         "--host".into(), "127.0.0.1".into(),
@@ -1292,12 +1288,6 @@ fn main() {
                         "--n-gpu-layers".into(), "99".into(),
                         "--flash-attn".into(), "on".into(),
                     ];
-
-                    // Pass license key (Pro tier) — uses LICENSE_FLAG defined above.
-                    if let Ok(key) = fs::read_to_string(&license_path) {
-                        args.push(LICENSE_FLAG.into());
-                        args.push(key.trim().to_string());
-                    }
 
                     match silent_cmd(&binary).args(&args).spawn() {
                         Ok(child) => {
