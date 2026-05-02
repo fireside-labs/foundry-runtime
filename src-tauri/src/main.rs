@@ -14,6 +14,7 @@ mod embed;
 mod sandbox;
 mod tool_ops;
 mod rag;
+mod watcher;
 
 use serde::Serialize;
 use tauri::Emitter;
@@ -1240,6 +1241,23 @@ fn main() {
             } else {
                 println!("[foundry] RAG engine ready");
             }
+        }
+    }
+
+    // Initialize file watcher for knowledge bases
+    let watcher_state = Arc::new(Mutex::new(watcher::WatcherState::default()));
+
+    // Register existing KBs with the watcher
+    if let Ok(kbs) = rag::kb_list() {
+        for kb in &kbs {
+            let root = std::path::PathBuf::from(&kb.root_path);
+            if root.exists() {
+                watcher::watch_kb(&watcher_state, &kb.id, root);
+            }
+        }
+        if !kbs.is_empty() {
+            watcher::start_watcher(watcher_state.clone());
+            println!("[foundry] File watcher started for {} knowledge base(s)", kbs.len());
         }
     }
 

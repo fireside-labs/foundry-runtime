@@ -21,6 +21,7 @@ zip = "2"
 sha2 = "0.10"
 hex = "0.4"
 rusqlite = { version = "0.31", features = ["bundled"] }
+notify = { version = "6", features = ["macos_kqueue"] }
 
 [features]
 default = ["custom-protocol"]
