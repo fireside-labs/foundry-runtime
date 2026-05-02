@@ -83,12 +83,19 @@ const App = {
         return this.license.tier === 'professional' || this.license.tier === 'enterprise';
     },
 
-    // Open Calendly in the user's default browser. Used by all "Request Pro Key" CTAs.
-    async requestProAccess(source) {
+    // Pro upgrade entry point. Shows the upgrade modal first (value-anchor + price)
+    // then routes to Calendly on confirmation. Per freemium-strategy agent: the
+    // modal exists so users see what Pro unlocks BEFORE the browser context-switch —
+    // amplifies conversion vs. opening Calendly cold.
+    requestProAccess(source) {
+        this.showUpgradeModal(source);
+    },
+
+    // Direct-open path used by the modal's confirm button. Bypasses the modal.
+    async openCalendly(source) {
         const url = source ? `${CALENDLY_URL}&utm_content=${encodeURIComponent(source)}` : CALENDLY_URL;
         if (window.__TAURI__) {
             try {
-                // Tauri 2 shell plugin — open URL in user's default browser.
                 await window.__TAURI__.core.invoke('plugin:shell|open', { path: url });
                 return;
             } catch (e) {
@@ -96,6 +103,96 @@ const App = {
             }
         }
         window.open(url, '_blank');
+    },
+
+    showUpgradeModal(source) {
+        // Idempotent — clicking a second Pro feature replaces the existing modal.
+        document.getElementById('upgrade-modal-overlay')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'upgrade-modal-overlay';
+        overlay.className = 'upgrade-modal-overlay';
+        overlay.innerHTML = `
+            <div class="upgrade-modal">
+                <button class="upgrade-modal-close" aria-label="Close">×</button>
+                <div class="upgrade-modal-eyebrow">FOUNDRY PRO</div>
+                <h2 class="upgrade-modal-title">More than a chat app.</h2>
+                <p class="upgrade-modal-lede">
+                    Pro unlocks the features that turn Foundry from "local LLM playground" into
+                    something a team uses every day. Hardware-bound license. Local inference.
+                    No data leaves your machine.
+                </p>
+
+                <div class="upgrade-feature-list">
+                    <div class="upgrade-feature">
+                        <div class="upgrade-feature-icon">◈</div>
+                        <div>
+                            <div class="upgrade-feature-name">Roundtable mode</div>
+                            <div class="upgrade-feature-desc">Multiple models in one conversation. Assign roles, route with @directives, build adversarial panels.</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-feature">
+                        <div class="upgrade-feature-icon">⬡</div>
+                        <div>
+                            <div class="upgrade-feature-name">Premium templates</div>
+                            <div class="upgrade-feature-desc">Strategy Session, Code Audit, Red/Blue Team, Research Panel, Brainstorm — pre-built panels with the right models and prompts.</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-feature">
+                        <div class="upgrade-feature-icon">↓</div>
+                        <div>
+                            <div class="upgrade-feature-name">PowerPoint export</div>
+                            <div class="upgrade-feature-desc">Generate branded .pptx decks from chat output. 5 presentation templates, fully styled.</div>
+                        </div>
+                    </div>
+                    <div class="upgrade-feature">
+                        <div class="upgrade-feature-icon">🧠</div>
+                        <div>
+                            <div class="upgrade-feature-name">Persistent memory</div>
+                            <div class="upgrade-feature-desc">Five cognitive memory types compound across every session. Core identity, facts, conversations, procedures, audit trail.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="upgrade-modal-cta">
+                    <div class="upgrade-modal-price">
+                        <div class="upgrade-modal-price-amount text-mono">$249<span style="font-size:14px;color:var(--text-tertiary)">/year</span></div>
+                        <div class="upgrade-modal-price-sub">Hardware-bound. 20-min intro call to issue your key.</div>
+                    </div>
+                    <button class="btn btn-primary upgrade-modal-confirm">
+                        Book Intro Call →
+                    </button>
+                </div>
+
+                <div class="upgrade-modal-foot">
+                    Already have a key? <a href="#" class="upgrade-modal-link" id="upgrade-modal-have-key">Enter it in Settings</a>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        // Wire up handlers
+        const close = () => overlay.remove();
+        overlay.querySelector('.upgrade-modal-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('.upgrade-modal-confirm').addEventListener('click', () => {
+            this.openCalendly(source);
+            close();
+        });
+        overlay.querySelector('#upgrade-modal-have-key').addEventListener('click', (e) => {
+            e.preventDefault();
+            close();
+            App.navigateTo('settings');
+        });
+
+        // Esc to close
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                close();
+                document.removeEventListener('keydown', onKey);
+            }
+        };
+        document.addEventListener('keydown', onKey);
     },
 
     showWorkspace() {

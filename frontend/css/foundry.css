@@ -1553,3 +1553,175 @@ html, body {
     color: var(--text-secondary);
     line-height: 1.55;
 }
+
+/* --- Upgrade modal ---
+   Shown when free-tier user clicks any Pro feature. Value-anchor + price + CTA.
+   Designed to feel like a magazine spread, not a SaaS pricing card. */
+
+.upgrade-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+    animation: upgrade-fade 0.18s ease-out;
+}
+
+@keyframes upgrade-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.upgrade-modal {
+    position: relative;
+    max-width: 600px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl) var(--space-xl) var(--space-lg);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(200, 117, 51, 0.08);
+    animation: upgrade-slide 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes upgrade-slide {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.upgrade-modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 22px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.upgrade-modal-close:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.upgrade-modal-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--space-sm);
+}
+
+.upgrade-modal-title {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    margin: 0 0 var(--space-sm) 0;
+    color: var(--text-primary);
+}
+
+.upgrade-modal-lede {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0 0 var(--space-lg) 0;
+}
+
+.upgrade-feature-list {
+    display: grid;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.upgrade-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+}
+
+.upgrade-feature-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(200, 117, 51, 0.1);
+    border: 1px solid rgba(200, 117, 51, 0.25);
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 14px;
+}
+
+.upgrade-feature-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.upgrade-feature-desc {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+.upgrade-modal-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: linear-gradient(135deg, rgba(200, 117, 51, 0.08) 0%, rgba(200, 117, 51, 0.02) 100%);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+
+.upgrade-modal-price-amount {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.upgrade-modal-price-sub {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+
+.upgrade-modal-confirm {
+    flex-shrink: 0;
+}
+
+.upgrade-modal-foot {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-tertiary);
+}
+
+.upgrade-modal-link {
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.upgrade-modal-link:hover {
+    text-decoration: underline;
+}
