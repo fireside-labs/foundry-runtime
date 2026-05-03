@@ -719,10 +719,13 @@ const Workspace = {
             ].join('\n');
         }
 
-        // Append tool capabilities (presentation generation, document creation, etc.)
+        // Append tool capabilities (presentation generation, document creation, file operations)
         if (typeof Tools !== 'undefined') {
             sysPrompt += '\n\n' + Tools.getPresentationPrompt();
             sysPrompt += '\n\n' + Tools.getDocumentPrompt();
+        }
+        if (typeof ToolCalls !== 'undefined') {
+            sysPrompt += '\n\n' + await ToolCalls.getToolPrompt();
         }
 
         messages.push({ role: 'system', content: sysPrompt });
@@ -741,6 +744,34 @@ const Workspace = {
             }
         } catch (e) {
             console.warn('[workspace] Memory context unavailable:', e);
+        }
+
+        // --- Inject RAG knowledge base context (Pro tier only) ---
+        // Searches all linked knowledge bases for content relevant to
+        // the user's latest message. Injects top-3 matching chunks.
+        try {
+            const ragGated = typeof App !== 'undefined' && !App.hasPro();
+            if (window.__TAURI__ && !ragGated) {
+                const lastUserMsg = conv.messages.filter(m => m.role === 'user').pop();
+                if (lastUserMsg && lastUserMsg.content) {
+                    const ragResults = await window.__TAURI__.core.invoke('kb_search', {
+                        query: lastUserMsg.content.slice(0, 200),
+                        namespace: null,
+                        limit: 3,
+                    });
+                    if (ragResults && ragResults.length > 0) {
+                        let ragCtx = '[KNOWLEDGE BASE — Relevant project documents]\n';
+                        ragResults.forEach(r => {
+                            ragCtx += `Source: ${r.source_path} (${r.namespace})\n`;
+                            ragCtx += r.chunk_text.slice(0, 500) + '\n\n';
+                        });
+                        messages.push({ role: 'system', content: ragCtx });
+                        console.log(`[workspace] RAG: injected ${ragResults.length} chunks`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[workspace] RAG context unavailable:', e);
         }
 
         // --- Context zones ---
@@ -885,6 +916,10 @@ const Workspace = {
             // Process for tool outputs (slide JSON → download card)
             if (typeof Tools !== 'undefined') {
                 Tools.processMessage(streamEl);
+            }
+            // Process for agentic tool calls (file ops → expandable cards)
+            if (typeof ToolCalls !== 'undefined') {
+                ToolCalls.processResponse(streamEl);
             }
         }
     },

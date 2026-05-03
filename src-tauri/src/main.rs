@@ -10,6 +10,11 @@
 mod memory;
 mod helper;
 mod binary_verify;
+mod embed;
+mod sandbox;
+mod tool_ops;
+mod rag;
+mod watcher;
 
 use serde::Serialize;
 use tauri::Emitter;
@@ -956,6 +961,51 @@ fn mem_search(query: String, limit: Option<u32>) -> Result<Vec<memory::SemanticM
     memory::semantic_search(&conn, &query, limit.unwrap_or(10))
 }
 
+// ---- Namespace-aware memory API (Phase 1) ----
+
+/// Save a semantic memory with an explicit hierarchical namespace.
+/// Validates namespace via embed::namespace_validate before insert.
+#[tauri::command]
+fn mem_save_ns(
+    key: String,
+    value: String,
+    category: String,
+    namespace: String,
+) -> Result<String, String> {
+    if !embed::namespace_validate(namespace.clone()) {
+        return Err(format!(
+            "Invalid namespace: '{}'. Must be dot-separated [a-z0-9_-]+ segments, 1-256 chars total.",
+            namespace
+        ));
+    }
+    let conn = memory::open_db()?;
+    memory::init_schema(&conn)?;
+    memory::semantic_save_with_namespace(&conn, &key, &value, &category, &namespace)
+}
+
+/// Search semantic memories filtered by namespace prefix.
+/// `namespace_prefix = "bakery"` matches `bakery`, `bakery.recipes`, `bakery.recipes.sourdough`, etc.
+/// Pass empty string or null to search across all namespaces.
+#[tauri::command]
+fn mem_search_ns(
+    query: String,
+    namespace_prefix: Option<String>,
+    limit: Option<u32>,
+) -> Result<Vec<memory::SemanticMemory>, String> {
+    let conn = memory::open_db()?;
+    let ns_ref = namespace_prefix.as_deref().filter(|s| !s.is_empty());
+    memory::semantic_search_ns(&conn, &query, ns_ref, limit.unwrap_or(10))
+}
+
+/// List distinct namespaces in semantic memory, optionally under a prefix.
+/// Used by the memory dashboard tree view.
+#[tauri::command]
+fn mem_list_namespaces(prefix: Option<String>) -> Result<Vec<String>, String> {
+    let conn = memory::open_db()?;
+    let prefix_ref = prefix.as_deref().filter(|s| !s.is_empty());
+    memory::semantic_list_namespaces(&conn, prefix_ref)
+}
+
 #[tauri::command]
 fn mem_forget(key: String) -> Result<(), String> {
     let conn = memory::open_db()?;
@@ -1185,11 +1235,36 @@ fn main() {
             eprintln!("[foundry] Memory DB init failed: {}", e);
         } else {
             println!("[foundry] Memory engine ready");
+            // Initialize RAG schema in the same database
+            if let Err(e) = rag::init_rag_schema(&conn) {
+                eprintln!("[foundry] RAG schema init failed: {}", e);
+            } else {
+                println!("[foundry] RAG engine ready");
+            }
+        }
+    }
+
+    // Initialize file watcher for knowledge bases
+    let watcher_state = Arc::new(Mutex::new(watcher::WatcherState::default()));
+
+    // Register existing KBs with the watcher
+    if let Ok(kbs) = rag::kb_list() {
+        for kb in &kbs {
+            let root = std::path::PathBuf::from(&kb.root_path);
+            if root.exists() {
+                watcher::watch_kb(&watcher_state, &kb.id, root);
+            }
+        }
+        if !kbs.is_empty() {
+            watcher::start_watcher(watcher_state.clone());
+            println!("[foundry] File watcher started for {} knowledge base(s)", kbs.len());
         }
     }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_system_info,
             get_hardware_id,
@@ -1231,6 +1306,32 @@ fn main() {
             get_documents_dir,
             // Setup / status
             get_setup_status,
+            // === DIRECTORY WORKSTREAM ===
+            tool_ops::project_link,
+            tool_ops::project_unlink,
+            tool_ops::project_get_active,
+            tool_ops::project_list,
+            tool_ops::tool_read_file,
+            tool_ops::tool_write_file,
+            tool_ops::tool_edit_file,
+            tool_ops::tool_list_dir,
+            tool_ops::tool_run_script,
+            // Knowledge Base (RAG)
+            rag::kb_create,
+            rag::kb_index,
+            rag::kb_embed,
+            rag::kb_search,
+            rag::kb_list,
+            rag::kb_delete,
+            // === MEMORY WORKSTREAM (shared infrastructure) ===
+            // Embedding service — used by memory subsystem AND RAG indexer.
+            // Calls helper sidecar on port 8081 in --embedding mode.
+            embed::embed_text,
+            embed::namespace_validate,
+            // === MEMORY WORKSTREAM (Phase 1: hierarchical namespacing) ===
+            mem_save_ns,
+            mem_search_ns,
+            mem_list_namespaces,
         ])
         .manage(backend_state.clone())
         .manage(helper_state.clone())

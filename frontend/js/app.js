@@ -152,6 +152,13 @@ const App = {
                             <div class="upgrade-feature-desc">Five cognitive memory types compound across every session. Core identity, facts, conversations, procedures, audit trail.</div>
                         </div>
                     </div>
+                    <div class="upgrade-feature">
+                        <div class="upgrade-feature-icon">📚</div>
+                        <div>
+                            <div class="upgrade-feature-name">Knowledge Bases</div>
+                            <div class="upgrade-feature-desc">Link project folders, auto-index documents and code. Models retrieve relevant context from your files at query time.</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="upgrade-modal-cta">
@@ -201,6 +208,7 @@ const App = {
         this.navigateTo('workspace');
         Workspace.init();
         StatusBar.start();
+        if (typeof Knowledge !== 'undefined') Knowledge.init();
         this.updateSidebarLicense();
         this.applyProGates();
     },
@@ -263,6 +271,7 @@ const App = {
         if (page === 'models') Models.init();
         if (page === 'settings') this.initSettings();
         if (page === 'memory' && typeof initMemoryPage === 'function') initMemoryPage();
+        if (page === 'knowledge' && typeof Knowledge !== 'undefined') Knowledge.render();
     },
 
     updateSidebarLicense() {
