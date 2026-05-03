@@ -48,6 +48,7 @@
         "windows": {
             "certificateThumbprint": null,
             "digestAlgorithm": "sha256",
+            "signCommand": "sign code trusted-signing --azure-credential-type azure-cli --trusted-signing-endpoint https://eus.codesigning.azure.net/ --trusted-signing-account fireside-labs-signing --trusted-signing-certificate-profile foundry-runtime-prod --timestamp-url http://timestamp.acs.microsoft.com %1",
             "nsis": {
                 "installMode": "currentUser",
                 "displayLanguageSelector": false
