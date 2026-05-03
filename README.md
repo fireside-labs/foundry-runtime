@@ -4,7 +4,7 @@
 
 Foundry Runtime is a Tauri-based desktop application that runs large language models entirely on your hardware — no cloud round-trips, no data leaving your perimeter. Built and maintained by [Fireside Labs](https://firesidelabs.ai).
 
-It is the open, inspectable companion to Fireside Labs' [calibration engagements](https://firesidelabs.ai/calibration): if you want to *feel* what local enterprise AI is like before talking to us about a custom build for your domain, this is the way to do it.
+It is the open, inspectable complement to Fireside Labs' [calibration engagements](https://firesidelabs.ai/calibration): if you want to *feel* what local enterprise AI is like before talking to us about a custom build for your domain, this is the way to do it.
 
 ---
 

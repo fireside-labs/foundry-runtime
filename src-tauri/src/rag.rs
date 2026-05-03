@@ -1,7 +1,7 @@
 // RAG — Retrieval-Augmented Generation over user project files.
 //
 // Document parsers for TXT, MD, PDF, DOCX. Chunking with overlap.
-// Embedding via shared embed_text command (Heimdall's embed.rs).
+// Embedding via shared embed_text command (see embed.rs).
 // Storage in SQLite (document_chunks table). Cosine similarity retrieval.
 //
 // Knowledge Base lifecycle:
@@ -353,7 +353,7 @@ fn discover_files_inner(dir: &Path, depth: usize, max_depth: usize, out: &mut Ve
 /// Create a new knowledge base linked to a folder.
 #[tauri::command]
 pub fn kb_create(namespace: String, root_path: String) -> Result<KnowledgeBase, String> {
-    // Validate namespace via Heimdall's shared validator
+    // Validate namespace via shared validator (see embed.rs)
     let ns_clean = namespace.trim().to_lowercase();
     if ns_clean.is_empty() {
         return Err("Namespace cannot be empty".into());
