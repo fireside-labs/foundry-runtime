@@ -2,10 +2,10 @@
 // Foundry Runtime — App Router & State
 // ==========================================================================
 
-// Calendly intro-call URL — Pro upgrade route per freemium architecture.
+// Cal.com intro-call URL — Pro upgrade route per freemium architecture.
 // "Request Pro Key" buttons open this in the user's default browser via the
 // Tauri shell plugin. Jordan comps the Pro key on the resulting call.
-const CALENDLY_URL = 'https://calendly.com/j-nguyen-firesidelabs?utm_source=foundry-runtime&utm_medium=pro-upgrade';
+const BOOKING_URL = 'https://cal.com/firesidelabs?utm_source=foundry-runtime&utm_medium=pro-upgrade';
 
 // Pro tier feature gate. UI elements check `App.hasPro()` before enabling.
 // Free tier ships with: chat, model download, status bar, markdown export, basic templates, single-session memory.
@@ -84,16 +84,16 @@ const App = {
     },
 
     // Pro upgrade entry point. Shows the upgrade modal first (value-anchor + price)
-    // then routes to Calendly on confirmation. Per freemium-strategy agent: the
-    // modal exists so users see what Pro unlocks BEFORE the browser context-switch —
-    // amplifies conversion vs. opening Calendly cold.
+    // then routes to the booking page on confirmation. Per freemium-strategy agent:
+    // the modal exists so users see what Pro unlocks BEFORE the browser context-switch —
+    // amplifies conversion vs. opening the booking page cold.
     requestProAccess(source) {
         this.showUpgradeModal(source);
     },
 
     // Direct-open path used by the modal's confirm button. Bypasses the modal.
-    async openCalendly(source) {
-        const url = source ? `${CALENDLY_URL}&utm_content=${encodeURIComponent(source)}` : CALENDLY_URL;
+    async openBooking(source) {
+        const url = source ? `${BOOKING_URL}&utm_content=${encodeURIComponent(source)}` : BOOKING_URL;
         if (window.__TAURI__) {
             try {
                 await window.__TAURI__.core.invoke('plugin:shell|open', { path: url });
@@ -183,7 +183,7 @@ const App = {
         overlay.querySelector('.upgrade-modal-close').addEventListener('click', close);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
         overlay.querySelector('.upgrade-modal-confirm').addEventListener('click', () => {
-            this.openCalendly(source);
+            this.openBooking(source);
             close();
         });
         overlay.querySelector('#upgrade-modal-have-key').addEventListener('click', (e) => {

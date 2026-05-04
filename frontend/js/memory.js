@@ -19,9 +19,9 @@
         if (!container) return;
 
         // Pro gate: free-tier users get the upgrade callout, not the dashboard.
-        // The sidebar Pro-gate already redirects most clicks to Calendly, but this
-        // is defense-in-depth: if the page does load (race condition, license expiry,
-        // or direct programmatic navigation), the page itself stays locked.
+        // The sidebar Pro-gate already redirects most clicks to the booking page,
+        // but this is defense-in-depth: if the page does load (race condition, license
+        // expiry, or direct programmatic navigation), the page itself stays locked.
         if (typeof App !== 'undefined' && !App.hasPro()) {
             container.innerHTML = buildLockedStateHTML();
             return;
@@ -34,7 +34,7 @@
 
     // Locked-state UI for free-tier users — this is a Pro-conversion surface.
     // Brand: copper accents, obsidian dark, JetBrains Mono labels.
-    // Lists what Pro memory unlocks + Calendly CTA.
+    // Lists what Pro memory unlocks + booking CTA.
     function buildLockedStateHTML() {
         const memoryTypes = [
             { name: 'Core Identity',     desc: 'Always-loaded context. What the AI knows about you on every prompt.' },

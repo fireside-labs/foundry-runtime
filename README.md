@@ -39,7 +39,7 @@ It is the open, inspectable complement to Fireside Labs' [calibration engagement
 | **Persistent memory** — 5 cognitive memory types, cross-session | — | ✓ |
 | Hardware-bound license, offline-validated | — | ✓ |
 
-Pro keys are issued on a 20-minute intro call. We comp the key — the call is the qualification. **[Book one →](https://calendly.com/j-nguyen-firesidelabs?utm_source=foundry-runtime-readme)**
+Pro keys are issued on a 20-minute intro call. We comp the key — the call is the qualification. **[Book one →](https://cal.com/firesidelabs?utm_source=foundry-runtime-readme)**
 
 ---
 
@@ -98,7 +98,7 @@ NVIDIA CUDA libraries are not redistributed by this project; install the [CUDA T
 
 ## Contact
 
-- Calibration engagements & Pro keys: [calendly.com/j-nguyen-firesidelabs](https://calendly.com/j-nguyen-firesidelabs)
+- Calibration engagements & Pro keys: [cal.com/firesidelabs](https://cal.com/firesidelabs)
 - Bugs & issues: [GitHub Issues](../../issues)
 - Email: [j.nguyen@firesidelabs.ai](mailto:j.nguyen@firesidelabs.ai)
 
