@@ -1,138 +1,138 @@
 ﻿{
     "_doc":  "Public binary fingerprints for Foundry Runtime. Tauri Rust verifies bundled binaries against this manifest at startup (SHA256, fail-closed on mismatch). Update this file ONLY when cutting a new public release.",
-    "version":  "0.1.0",
+    "version":  "0.1.1",
     "schema_version":  "1",
     "binaries":  {
                      "mtmd.dll":  {
-                                      "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                      "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                       "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                      "sha256":  "6823ff54924ff4b7bf1b801e1f41700bba0c59320d1b31e0c507a14794327d04",
-                                      "size_bytes":  1158656,
+                                      "sha256":  "2b57e6f684f76b07c79e4b809a24317205dd84d442c501416d3612007c98db0a",
+                                      "size_bytes":  1241600,
                                       "platform":  "windows-x64",
                                       "license":  "MIT (llama.cpp upstream)"
                                   },
                      "ggml-cpu-cannonlake.dll":  {
-                                                     "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                     "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                      "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                     "sha256":  "1c5204230bbd76dc9e5974ce8b5eb09d5c9b117839d44780a598a3baad2b04c6",
-                                                     "size_bytes":  1369600,
+                                                     "sha256":  "777b4ecad27d7364b75c905c3641681ed1d0970cb7852cf3e259abbf4845f917",
+                                                     "size_bytes":  1375744,
                                                      "platform":  "windows-x64",
                                                      "license":  "MIT (llama.cpp upstream)"
                                                  },
                      "ggml-cpu-zen4.dll":  {
-                                               "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                               "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                               "sha256":  "27793fa538eff9c3c141d79013381ff560792ee352fca4964997997cb8efc84d",
-                                               "size_bytes":  1363456,
+                                               "sha256":  "76912cda9761bd3c4b934d395c71cdefe615b81a4dfbed49d7106e1207e29a16",
+                                               "size_bytes":  1369600,
                                                "platform":  "windows-x64",
                                                "license":  "MIT (llama.cpp upstream)"
                                            },
                      "ggml-cpu-sse42.dll":  {
-                                                "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                 "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                "sha256":  "86bd89656c49cbd7d5809e53813ef9d8415b2f544c4238cd3202a6d9cfb51765",
-                                                "size_bytes":  850432,
+                                                "sha256":  "54b3aad006e71ce65a8a832268b219600c3ed411a963473a5fd5235a01c39eba",
+                                                "size_bytes":  856064,
                                                 "platform":  "windows-x64",
                                                 "license":  "MIT (llama.cpp upstream)"
                                             },
                      "ggml-rpc.dll":  {
-                                          "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                          "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                           "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                          "sha256":  "e246397a6cab9968b42f6c6ec81e15c5388b94b76bca6dc888718cd1425be000",
-                                          "size_bytes":  150528,
+                                          "sha256":  "1a15fd3c3be4621ef6b70e0da1cb6035fe12e5d927019d3a71f725645810e0ab",
+                                          "size_bytes":  149504,
                                           "platform":  "windows-x64",
                                           "license":  "MIT (llama.cpp upstream)"
                                       },
                      "ggml-cpu-skylakex.dll":  {
-                                                   "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                   "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                    "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                   "sha256":  "f9eb165446007093ebeb54532b49365d21416147314090d65af3f7ce1c67e320",
-                                                   "size_bytes":  1362432,
+                                                   "sha256":  "e298ab430a5e6b3dd9225995063e1c416d9481bad3556bdbde3872f976dfa7e6",
+                                                   "size_bytes":  1369088,
                                                    "platform":  "windows-x64",
                                                    "license":  "MIT (llama.cpp upstream)"
                                                },
                      "ggml-cpu-piledriver.dll":  {
-                                                     "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                     "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                      "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                     "sha256":  "a7be0a2771db40a131dd0343be196b17e9e1e7f15a2c0ad3387168341ed0d8f3",
-                                                     "size_bytes":  1032192,
+                                                     "sha256":  "411d5377c5164b91e8de07746151adbe1525e24acea4caa2905f434f80481a14",
+                                                     "size_bytes":  1037824,
                                                      "platform":  "windows-x64",
                                                      "license":  "MIT (llama.cpp upstream)"
                                                  },
                      "ggml-cpu-icelake.dll":  {
-                                                  "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                  "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                   "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                  "sha256":  "f03662dba009b3f2319775d997c61a536fe94803e3a26ab76dbc913abff214f0",
-                                                  "size_bytes":  1362432,
+                                                  "sha256":  "4bfd5075edc4d8303af7ed2f293ecec38832c27d776eccde71a88284f5f2ff4b",
+                                                  "size_bytes":  1368576,
                                                   "platform":  "windows-x64",
                                                   "license":  "MIT (llama.cpp upstream)"
                                               },
                      "ggml-cpu-x64.dll":  {
-                                              "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                              "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                               "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                              "sha256":  "f87f77c859d92003204b5c63c290190e6f784a5a6a34322ccfdd72e92b58c601",
-                                              "size_bytes":  842240,
+                                              "sha256":  "a4a988a8cdfc8f3fcd29fc509d29ceed27b43dccbd96f714b9db3f689dd3a1d4",
+                                              "size_bytes":  847872,
                                               "platform":  "windows-x64",
                                               "license":  "MIT (llama.cpp upstream)"
                                           },
                      "ggml-cpu-sapphirerapids.dll":  {
-                                                         "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                         "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                          "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                         "sha256":  "390e2544fe860d0b3a2a6a5687981911345d064d01ff69e79cbf629a17000a94",
-                                                         "size_bytes":  1631232,
+                                                         "sha256":  "c28bdd828077e0465334096a31f5e49ecef5bf10fcb8a0127e9f8c12309bbbb2",
+                                                         "size_bytes":  1637888,
                                                          "platform":  "windows-x64",
                                                          "license":  "MIT (llama.cpp upstream)"
                                                      },
                      "ggml.dll":  {
-                                      "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                      "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                       "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                      "sha256":  "c20b7755fb005e9d705e06336ebe12b0d1827edc166a389b696368bbdc8eebad",
+                                      "sha256":  "6903dbb40d9db330cfe50db89ac7b03b73f4c7b7226497d6ddf7bd3ee1c9764a",
                                       "size_bytes":  96768,
                                       "platform":  "windows-x64",
                                       "license":  "MIT (llama.cpp upstream)"
                                   },
                      "llama-common.dll":  {
-                                              "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                              "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                               "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                              "sha256":  "5b007e5f363d129be7383b0c529d16102d619b3b82ddf32daa896fb4b7b73eaa",
-                                              "size_bytes":  8045056,
+                                              "sha256":  "1585004ef1647c1bcbb1d4a461b56864d10ec9275130ae5de68c6c05fcd68096",
+                                              "size_bytes":  8020992,
                                               "platform":  "windows-x64",
                                               "license":  "MIT (llama.cpp upstream)"
                                           },
                      "ggml-cpu-ivybridge.dll":  {
-                                                    "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                    "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                     "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                    "sha256":  "f29d83681eb02c0c5c9cfbfa5e4c80ec7668d4595cf11d811d1d5a587c1149e2",
-                                                    "size_bytes":  1029632,
+                                                    "sha256":  "ea7e90189ae48d81589378594a3d138981e6c1bdb6471c6efb468a9f12f6faa6",
+                                                    "size_bytes":  1035264,
                                                     "platform":  "windows-x64",
                                                     "license":  "MIT (llama.cpp upstream)"
                                                 },
                      "llama-server.exe":  {
-                                              "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                              "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                               "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                              "sha256":  "095a561d6ec1c2e4416cc3758910b2359d3e6230013f48af482fdd58f5259c44",
-                                              "size_bytes":  13277696,
+                                              "sha256":  "14ed909adc6f25b639ddf49ae5974beaef36e118c41868c9218dcc59b03c04d7",
+                                              "size_bytes":  13387776,
                                               "platform":  "windows-x64",
                                               "license":  "MIT (llama.cpp upstream)"
                                           },
                      "ggml-cpu-alderlake.dll":  {
-                                                    "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                    "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                     "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                    "sha256":  "0e32b9a4cb917eecd64dffb7c899e9757321c5bab9f676011390e130ffae2b57",
-                                                    "size_bytes":  1131520,
+                                                    "sha256":  "e6b4b9c58345b7ea960fd0515b63ca96782876fd1faee9e050868443cf3f79aa",
+                                                    "size_bytes":  1136640,
                                                     "platform":  "windows-x64",
                                                     "license":  "MIT (llama.cpp upstream)"
                                                 },
                      "ggml-base.dll":  {
-                                           "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                           "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                            "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                           "sha256":  "e246f91370ff2fc9f2de88ceb9a522a1c3bf93a83af42b21bd404bf32b4e6908",
+                                           "sha256":  "4c4ce39fdd3e51fd3deabcdf0bca91a020540aa32c0e9549c7430de4b70f3b8e",
                                            "size_bytes":  780800,
                                            "platform":  "windows-x64",
                                            "license":  "MIT (llama.cpp upstream)"
                                        },
                      "libomp140.x86_64.dll":  {
-                                                  "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                  "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                   "upstream":  "https://github.com/ggml-org/llama.cpp",
                                                   "sha256":  "9ab1cb787e52b2a36133899c01c1db1f876067d1471cd224ead85f40a8152b99",
                                                   "size_bytes":  634936,
@@ -140,42 +140,42 @@
                                                   "license":  "MIT (llama.cpp upstream)"
                                               },
                      "ggml-cpu-cascadelake.dll":  {
-                                                      "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                      "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                       "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                      "sha256":  "1957c7912df1b483028d90ff9da276e3f60a078daa01ce278d08feb4e3c42ea2",
-                                                      "size_bytes":  1355264,
+                                                      "sha256":  "e75f2f80834b16a5ec641d8792c9c364c08149d5b79de20df8c45783efd4698e",
+                                                      "size_bytes":  1361920,
                                                       "platform":  "windows-x64",
                                                       "license":  "MIT (llama.cpp upstream)"
                                                   },
                      "ggml-cpu-haswell.dll":  {
-                                                  "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                  "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                   "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                  "sha256":  "c629346981bb6d0035a881f275706a5368f97ea358c3145c7de9de8571530179",
-                                                  "size_bytes":  1136128,
+                                                  "sha256":  "4c461e725a3ac4d710c66ec4785897dc980b8cf14725f41ed96cc645f7f4ec3b",
+                                                  "size_bytes":  1141760,
                                                   "platform":  "windows-x64",
                                                   "license":  "MIT (llama.cpp upstream)"
                                               },
                      "ggml-cpu-sandybridge.dll":  {
-                                                      "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                      "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                       "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                      "sha256":  "7fa7fe534b1bcdf8c2b156ed5811ec8e4ca9484596c2338afcc3cbddf4e0752f",
-                                                      "size_bytes":  1009664,
+                                                      "sha256":  "32b6e31d1989911ce92eba944fad4ac301c5940d83e43dfa4ea73c563f44993e",
+                                                      "size_bytes":  1015808,
                                                       "platform":  "windows-x64",
                                                       "license":  "MIT (llama.cpp upstream)"
                                                   },
                      "ggml-cpu-cooperlake.dll":  {
-                                                     "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                                     "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                                      "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                                     "sha256":  "3fe942c5aac91727aa02c4b07837618e05c301fb1aa0e60b068cd22c074fd3e5",
-                                                     "size_bytes":  1355776,
+                                                     "sha256":  "d36c30b517d4d6a11a6cd84788f85e10a647386680713ad0284af7fe5cd45698",
+                                                     "size_bytes":  1362432,
                                                      "platform":  "windows-x64",
                                                      "license":  "MIT (llama.cpp upstream)"
                                                  },
                      "llama.dll":  {
-                                       "build_tag":  "llamacpp-b8999-stock-cpu-x64",
+                                       "build_tag":  "llamacpp-b9093-stock-cpu-x64",
                                        "upstream":  "https://github.com/ggml-org/llama.cpp",
-                                       "sha256":  "a63f5fad79687489b8e35322edc822bf2fe1895761a52b49a074f9e251170a30",
-                                       "size_bytes":  2505728,
+                                       "sha256":  "f208fdcb2203955b5eedcbca86a487eccc7f738b396367b1e1e844ce99afaaaf",
+                                       "size_bytes":  2440192,
                                        "platform":  "windows-x64",
                                        "license":  "MIT (llama.cpp upstream)"
                                    }

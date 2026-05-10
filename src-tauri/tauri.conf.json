@@ -1,6 +1,6 @@
 {
     "productName": "Foundry Runtime",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "identifier": "ai.foundry.runtime",
     "build": {
         "frontendDist": "../frontend",

@@ -1,6 +1,6 @@
 [package]
 name = "foundry-runtime"
-version = "0.1.0"
+version = "0.1.1"
 description = "Foundry Runtime - Local AI inference for the enterprise."
 authors = ["Fireside Labs"]
 edition = "2021"
