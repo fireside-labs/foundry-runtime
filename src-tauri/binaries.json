@@ -1,6 +1,6 @@
 ﻿{
     "_doc":  "Public binary fingerprints for Foundry Runtime. Tauri Rust verifies bundled binaries against this manifest at startup (SHA256, fail-closed on mismatch). Update this file ONLY when cutting a new public release.",
-    "version":  "0.1.1",
+    "version":  "0.2.0",
     "schema_version":  "1",
     "binaries":  {
                      "mtmd.dll":  {

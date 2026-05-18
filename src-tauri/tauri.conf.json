@@ -1,6 +1,6 @@
 {
     "productName": "Foundry Runtime",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "identifier": "ai.foundry.runtime",
     "build": {
         "frontendDist": "../frontend",
@@ -53,6 +53,12 @@
                 "installMode": "currentUser",
                 "displayLanguageSelector": false
             }
+        },
+        "macOS": {
+            "minimumSystemVersion": "12.0",
+            "entitlements": "entitlements.plist",
+            "signingIdentity": "Developer ID Application: Jordan Nguyen (8TAV5AV6U6)",
+            "providerShortName": "8TAV5AV6U6"
         }
     }
 }

@@ -18,7 +18,8 @@ out/
 .next/
 
 # Built binaries — these belong in GitHub Releases, not the source repo.
-# The Tauri runtime's `download_llama_server` fetches them on first run.
+# Each release's build script stages the platform-appropriate binaries into
+# src-tauri/binaries/ and the Tauri bundler embeds them in the MSI/DMG.
 *.exe
 *.dll
 *.msi
@@ -27,6 +28,9 @@ out/
 *.deb
 *.rpm
 *.AppImage
+# macOS-specific: dylibs and the no-extension llama-server executable.
+*.dylib
+src-tauri/binaries/llama-server
 
 # Model weights — too large for git, distributed separately
 *.gguf

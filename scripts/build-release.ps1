@@ -57,9 +57,42 @@ if (-not (Test-Path $expectedExe)) {
 }
 
 # --- 2. Compute hashes ---
+#
+# Important: starting in v0.2.0 the manifest is multi-platform (Windows + macOS
+# entries coexist, see PHASE2_MACOS_PLAYBOOK.md Option A). This script only
+# touches .exe/.dll entries and PRESERVES any other entries (Mac llama-server,
+# *.dylib) already in binaries.json. Don't revert to a from-scratch rewrite
+# or you'll nuke the Mac entries committed by build-release.sh.
 
-Write-Host "Hashing binaries..." -ForegroundColor Yellow
-$binaryEntries = @{}
+Write-Host "Hashing Windows binaries (.exe/.dll only)..." -ForegroundColor Yellow
+
+# Seed with existing non-Windows entries from binaries.json so we preserve them.
+$binaryEntries = [ordered]@{}
+if (Test-Path $manifestPath) {
+    try {
+        $existing = Get-Content $manifestPath -Raw | ConvertFrom-Json
+        if ($existing -and $existing.binaries) {
+            foreach ($prop in $existing.binaries.PSObject.Properties) {
+                $val = $prop.Value
+                # Only carry forward entries that are NOT this Windows cut.
+                # We'll re-hash and overwrite the Windows entries below.
+                if ($prop.Name -notmatch '\.(exe|dll)$') {
+                    $kept = [ordered]@{
+                        sha256     = [string]$val.sha256
+                        size_bytes = [long]$val.size_bytes
+                        platform   = [string]$val.platform
+                        build_tag  = [string]$val.build_tag
+                        license    = [string]$val.license
+                        upstream   = [string]$val.upstream
+                    }
+                    $binaryEntries[$prop.Name] = $kept
+                }
+            }
+        }
+    } catch {
+        Write-Host "  Note: could not parse existing $manifestPath ($_) - starting fresh." -ForegroundColor DarkYellow
+    }
+}
 
 Get-ChildItem $binariesDir -File | Where-Object {
     $_.Extension -in @(".exe", ".dll")
@@ -68,7 +101,7 @@ Get-ChildItem $binariesDir -File | Where-Object {
     $size = $_.Length
     $sha = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
 
-    $entry = @{
+    $entry = [ordered]@{
         sha256 = $sha
         size_bytes = $size
         platform = "windows-x64"
@@ -83,7 +116,8 @@ Get-ChildItem $binariesDir -File | Where-Object {
     Write-Host "  $name  $sizeStr bytes  $shortHash"
 }
 
-if ($binaryEntries.Count -eq 0) {
+$winCount = ($binaryEntries.Keys | Where-Object { $_ -match '\.(exe|dll)$' }).Count
+if ($winCount -eq 0) {
     throw "No .exe or .dll files found in binaries/. Nothing to hash."
 }
 

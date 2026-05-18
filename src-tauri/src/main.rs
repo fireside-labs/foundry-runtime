@@ -556,13 +556,36 @@ fn find_llama_server() -> Option<String> {
     let exe = if cfg!(target_os = "windows") { "llama-server.exe" } else { "llama-server" };
     let foundry = ensure_foundry_dirs();
 
-    // 1. PRIMARY: ~/.foundry/bin/ (portable — always works)
+    // 1. USER OVERRIDE: ~/.foundry/bin/ wins over the bundled copy so users can
+    //    swap in a different llama-server build without rebuilding the app. The
+    //    binary still gets hash-checked against binaries.json by verify_binary,
+    //    so a non-matching override fails closed — that's intentional.
     let bundled = foundry.join("bin").join(exe);
     if bundled.exists() {
         return Some(bundled.to_string_lossy().to_string());
     }
 
-    // 2. Check nested dirs inside bin (zip extraction artifacts)
+    // 2. BUNDLE RESOURCES: shipped alongside the app under bundle.resources.
+    //    macOS .app:  Foo.app/Contents/MacOS/foundry-runtime
+    //                  → ../Resources/binaries/llama-server
+    //    Windows MSI: <install>/foundry-runtime.exe
+    //                  → <install>/resources/binaries/llama-server.exe
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            if let Some(contents_dir) = exe_dir.parent() {
+                let mac = contents_dir.join("Resources").join("binaries").join(exe);
+                if mac.exists() {
+                    return Some(mac.to_string_lossy().to_string());
+                }
+            }
+            let win = exe_dir.join("resources").join("binaries").join(exe);
+            if win.exists() {
+                return Some(win.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // 3. Check nested dirs inside ~/.foundry/bin/ (zip extraction artifacts)
     let bin_dir = foundry.join("bin");
     if bin_dir.exists() {
         for entry in walkdir_find_exe(&bin_dir, exe) {
@@ -570,7 +593,7 @@ fn find_llama_server() -> Option<String> {
         }
     }
 
-    // 3. Optional fallback: user can set FOUNDRY_BIN_PATH env var to a directory
+    // 4. Optional fallback: user can set FOUNDRY_BIN_PATH env var to a directory
     //    containing llama-server. Useful for shared-binary deployments.
     if let Ok(custom_dir) = std::env::var("FOUNDRY_BIN_PATH") {
         let custom_path = PathBuf::from(custom_dir).join(exe);
